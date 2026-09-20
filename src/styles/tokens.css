@@ -1,0 +1,8 @@
+:root {
+  --black: #050607; --obsidian: #0a0c0e; --graphite: #101316; --smoke: #171b1f;
+  --bone: #f2f0e8; --silver: #9ba2a8; --muted: #686f75; --ice: #a8d8e8;
+  --ice-bright: #d8f5ff; --ember: #ef7b45; --success: #9bc77a; --danger: #e06565;
+  --display: 'Iowan Old Style', 'Baskerville', 'Times New Roman', serif;
+  --body: 'Avenir Next', 'Segoe UI Variable', 'Trebuchet MS', sans-serif;
+  --ease-heavy: cubic-bezier(0.32, 0.72, 0, 1); --safe-bottom: max(20px, env(safe-area-inset-bottom));
+}

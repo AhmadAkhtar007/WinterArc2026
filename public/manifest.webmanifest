@@ -1,0 +1,12 @@
+{
+  "name": "Winter Arc 2026",
+  "short_name": "Winter Arc",
+  "description": "One hundred days of deliberate work.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#050607",
+  "theme_color": "#07090b",
+  "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
