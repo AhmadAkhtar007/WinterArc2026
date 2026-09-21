@@ -1,0 +1,42 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import type { DashboardSnapshot } from '../domain/types'
+import { ProfilePage } from './ProfilePage'
+
+const dashboard: DashboardSnapshot = {
+  profile: { id: '1', playerCode: 'player001', displayName: 'Legend', initials: 'LG', isAdmin: true },
+  dayNumber: 1,
+  totalDays: 100,
+  daysRemaining: 99,
+  points: 0,
+  rank: 1,
+  streak: 0,
+  completionRate: 0,
+  todayChallenges: [],
+}
+
+describe('ProfilePage account controls', () => {
+  it('shows the permanent player id and updates the display name', async () => {
+    const updateDisplayName = vi.fn().mockResolvedValue(undefined)
+    render(<ProfilePage dashboard={dashboard} onSignOut={vi.fn()} onUpdateDisplayName={updateDisplayName} onUpdatePassword={vi.fn()} />)
+
+    expect(screen.getByText('PLAYER 001')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'The Legend' } })
+    fireEvent.click(screen.getByRole('button', { name: /save display name/i }))
+
+    await waitFor(() => expect(updateDisplayName).toHaveBeenCalledWith('The Legend'))
+  })
+
+  it('requires matching new passwords before changing one', async () => {
+    const updatePassword = vi.fn()
+    render(<ProfilePage dashboard={dashboard} onSignOut={vi.fn()} onUpdateDisplayName={vi.fn()} onUpdatePassword={updatePassword} />)
+
+    fireEvent.change(screen.getByLabelText('Current password'), { target: { value: 'winterarc26' } })
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'different99' } })
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'otherpass99' } })
+    fireEvent.click(screen.getByRole('button', { name: /change password/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('New passwords do not match.')
+    expect(updatePassword).not.toHaveBeenCalled()
+  })
+})

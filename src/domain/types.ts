@@ -3,6 +3,7 @@ export type CompletionStatus = 'confirmed' | 'pending' | 'reversed'
 
 export interface PlayerProfile {
   id: string
+  playerCode: string
   displayName: string
   initials: string
   isAdmin: boolean

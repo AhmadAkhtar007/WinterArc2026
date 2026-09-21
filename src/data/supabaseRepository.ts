@@ -75,7 +75,7 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
     async getDashboard(): Promise<DashboardSnapshot> {
       const user = await currentUser()
       const [{ data: profile, error }, challenges, ranks] = await Promise.all([
-        client.from('profiles').select('display_name').eq('id', user.id).single(), repository.getChallenges(), leaderboard(),
+        client.from('profiles').select('display_name, player_code').eq('id', user.id).single(), repository.getChallenges(), leaderboard(),
       ])
       if (error || !profile) throw new Error('Profile could not be loaded.')
       const me = ranks.find((entry) => entry.id === user.id)
@@ -84,7 +84,7 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
       const dailyCount = challenges.filter((challenge) => challenge.frequency === 'daily').length
       const displayName = profile.display_name
       return {
-        profile: { id: user.id, displayName, initials: displayName.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(), isAdmin: user.app_metadata.role === 'admin' },
+        profile: { id: user.id, playerCode: profile.player_code, displayName, initials: displayName.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(), isAdmin: user.app_metadata.role === 'admin' },
         dayNumber, totalDays: 100, daysRemaining: 100 - dayNumber, points: me?.points ?? 0, rank: me?.rank ?? ranks.length,
         streak: 0, completionRate: dailyCount ? Math.round((completedDaily / dailyCount) * 100) : 0,
         todayChallenges: challenges.filter((challenge) => challenge.frequency === 'daily'),
@@ -118,6 +118,21 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
     },
     async reverseCompletion(completionId, reason) {
       const { error } = await client.rpc('reverse_completion', { target_completion_id: completionId, reversal_reason: reason })
+      if (error) throw new Error(error.message)
+    },
+    async updateDisplayName(displayName) {
+      const user = await currentUser()
+      const cleanName = displayName.trim()
+      if (cleanName.length < 2 || cleanName.length > 40) throw new Error('Display name must be 2 to 40 characters.')
+      const { error } = await client.from('profiles').update({ display_name: cleanName }).eq('id', user.id)
+      if (error) throw new Error(error.message)
+    },
+    async updatePassword(currentPassword, password) {
+      const user = await currentUser()
+      if (!user.email) throw new Error('This account cannot change its password.')
+      const { error: verifyError } = await client.auth.signInWithPassword({ email: user.email, password: currentPassword })
+      if (verifyError) throw new Error('Current password is incorrect.')
+      const { error } = await client.auth.updateUser({ password })
       if (error) throw new Error(error.message)
     },
     async signOut() { const { error } = await client.auth.signOut(); if (error) throw new Error(error.message) },

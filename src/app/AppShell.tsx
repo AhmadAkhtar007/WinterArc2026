@@ -63,7 +63,7 @@ export function AppShell({ repository }: { repository: AppRepository }) {
         {route === 'today' && <TodayPage dashboard={dashboard} busyChallenge={busyChallenge} onComplete={completeChallenge} />}
         {route === 'challenges' && <ChallengesPage challenges={challenges} busyChallenge={busyChallenge} onComplete={completeChallenge} />}
         {route === 'leaderboard' && <LeaderboardPage entries={leaderboard} />}
-        {route === 'profile' && <ProfilePage dashboard={dashboard} onSignOut={() => repository.signOut()} />}
+        {route === 'profile' && <ProfilePage dashboard={dashboard} onSignOut={() => repository.signOut()} onUpdateDisplayName={async (displayName) => { await repository.updateDisplayName(displayName); await refresh() }} onUpdatePassword={(currentPassword, password) => repository.updatePassword(currentPassword, password)} />}
         {route === 'admin' && dashboard.profile.isAdmin && <AdminPage repository={repository} />}
       </main>
       <BottomNavigation activeRoute={route} onNavigate={(nextRoute) => { setRoute(nextRoute); void refresh() }} />

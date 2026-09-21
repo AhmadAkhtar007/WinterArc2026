@@ -86,7 +86,7 @@ export function createPreviewRepository(): AppRepository {
     async getDashboard(): Promise<DashboardSnapshot> {
       const leaderboard = await this.getLeaderboard()
       return {
-        profile: { id: '1', displayName: 'Ahmad', initials: 'AA', isAdmin: true },
+        profile: { id: '1', playerCode: 'player001', displayName: 'Legend', initials: 'LG', isAdmin: true },
         dayNumber: 1,
         totalDays: 100,
         daysRemaining: 99,
@@ -163,6 +163,8 @@ export function createPreviewRepository(): AppRepository {
         if (completion.id === completionId) completion.status = 'reversed'
       }
     },
+    async updateDisplayName() {},
+    async updatePassword() {},
     async signOut() {},
   }
 }
