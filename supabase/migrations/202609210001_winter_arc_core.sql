@@ -194,10 +194,43 @@ create function private.create_profile_for_user()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.profiles (id, display_name, avatar_seed)
-  values (new.id, left(coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1)), 40), new.id::text);
+  values (
+    new.id,
+    case when coalesce(new.raw_app_meta_data->>'role', '') = 'admin'
+      then 'Legend'
+      else left(coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1)), 40)
+    end,
+    new.id::text
+  );
   return new;
 end;
 $$;
 
 revoke execute on function private.create_profile_for_user() from public, anon, authenticated;
 create trigger create_profile_after_signup after insert on auth.users for each row execute function private.create_profile_for_user();
+
+insert into public.profiles (id, display_name, avatar_seed)
+select
+  user_record.id,
+  case when coalesce(user_record.raw_app_meta_data->>'role', '') = 'admin'
+    then 'Legend'
+    else left(coalesce(user_record.raw_user_meta_data->>'display_name', split_part(user_record.email, '@', 1)), 40)
+  end,
+  user_record.id::text
+from auth.users as user_record
+on conflict (id) do nothing;
+
+create function private.sync_admin_game_name()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if coalesce(new.raw_app_meta_data->>'role', '') = 'admin' then
+    update public.profiles set display_name = 'Legend' where id = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+revoke execute on function private.sync_admin_game_name() from public, anon, authenticated;
+create trigger sync_admin_game_name_after_role_change
+after update of raw_app_meta_data on auth.users
+for each row execute function private.sync_admin_game_name();

@@ -14,7 +14,7 @@ begin
   if has_table_privilege('authenticated', 'public.completions', 'INSERT') then raise exception 'Authenticated users must score through RPC only'; end if;
   if not has_function_privilege('authenticated', 'public.complete_challenge(uuid)', 'EXECUTE') then raise exception 'Authenticated users need completion RPC'; end if;
   if has_function_privilege('anon', 'public.complete_challenge(uuid)', 'EXECUTE') then raise exception 'Anon must not execute completion RPC'; end if;
+  if to_regprocedure('private.sync_admin_game_name()') is null then raise exception 'Admin game-name synchronization is missing'; end if;
 end $$;
 
 rollback;
-

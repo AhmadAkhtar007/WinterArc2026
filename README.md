@@ -19,7 +19,7 @@ Without environment variables, the application opens in a fully interactive prev
 2. Apply `supabase/migrations/202609210001_winter_arc_core.sql` through the Supabase migration workflow.
 3. Copy `.env.example` to `.env.local` and supply the project URL and publishable key.
 4. Create participant accounts through Supabase Auth or its invitation flow.
-5. Set the sole administrator's protected app metadata to `{ "role": "admin" }`, then require that account to sign in again so its JWT refreshes.
+5. Set the sole administrator's protected app metadata to `{ "role": "admin" }`, then require that account to sign in again so its JWT refreshes. The migration synchronizes that account's game name to `Legend`; it still appears and competes on the normal leaderboard.
 
 Never put a secret key or service-role key in a `VITE_` environment variable. Every `VITE_` value is shipped to browsers.
 
@@ -42,4 +42,3 @@ Deploy the generated `dist` directory to any HTTPS static host with SPA fallback
 - WhatsApp carries proof for approval-required challenges.
 - Only confirmed XP affects the leaderboard.
 - Player-created challenges, push notifications, an APK, and social features are intentionally excluded.
-
