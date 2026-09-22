@@ -52,7 +52,6 @@ export interface DashboardSnapshot {
   rank: number
   streak: number
   completionRate: number
-  todayChallenges: Challenge[]
   nearestRival?: LeaderboardEntry
 }
 

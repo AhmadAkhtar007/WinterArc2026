@@ -94,7 +94,6 @@ export function createPreviewRepository(): AppRepository {
         rank: 2,
         streak: 12,
         completionRate: 68,
-        todayChallenges: activeChallenges.filter((challenge) => challenge.frequency === 'daily'),
         nearestRival: leaderboard[0],
       }
     },

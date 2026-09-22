@@ -12,7 +12,6 @@ const dashboard: DashboardSnapshot = {
   rank: 1,
   streak: 0,
   completionRate: 0,
-  todayChallenges: [],
 }
 
 describe('ProfilePage account controls', () => {

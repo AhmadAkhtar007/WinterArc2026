@@ -95,31 +95,11 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .identity-reveal p { margin: 0; max-width: 280px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .identity-reveal .primary-button { width: 100%; margin-top: 12px; }
 
-.hero-panel { position: relative; isolation: isolate; overflow: hidden; padding: 34px 24px 26px; border-radius: 28px; background: linear-gradient(160deg, rgba(255,255,255,.04), transparent 46%), #0b1013; box-shadow: inset 0 1px rgba(255,255,255,.12), 0 30px 80px rgba(0,0,0,.45); }
-.hero-panel::after { content: ''; position: absolute; inset: 1px; z-index: -1; border-radius: 33px; border: 1px solid rgba(255,255,255,.05); pointer-events: none; }
-.hero-panel__atmosphere { position: absolute; inset: 0; z-index: -2; background: radial-gradient(ellipse at 74% 22%, rgba(168,216,232,.22), transparent 26%), radial-gradient(ellipse at 50% 104%, rgba(42,64,73,.92), transparent 48%), linear-gradient(145deg, transparent 42%, rgba(5,6,7,.95) 90%); }
-.hero-panel__atmosphere::before, .hero-panel__atmosphere::after { content: ''; position: absolute; width: 280px; height: 460px; bottom: -200px; background: linear-gradient(150deg, transparent 48%, rgba(153,196,211,.14) 49%, transparent 50%); transform: rotate(-18deg); }
-.hero-panel__atmosphere::after { right: -30px; bottom: -170px; transform: scaleX(-1) rotate(-8deg); }
-.eyebrow, .section-kicker { color: var(--ice); font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; }
-.eyebrow { display: flex; align-items: center; gap: 9px; }
-.eyebrow span { width: 18px; height: 1px; background: currentColor; }
-.hero-panel h1, .page-header h1 { max-width: 630px; margin: 38px 0 16px; font: 400 clamp(52px, 14vw, 94px)/.9 var(--display); letter-spacing: -.055em; }
-.hero-panel h1 em, .page-header h1 em { color: var(--ice); font-weight: 400; }
-.hero-panel > p, .page-header > p { max-width: 390px; color: #b2b5b5; font-size: 14px; line-height: 20px; }
-.season-line { height: 2px; margin: 42px 0 24px; background: rgba(255,255,255,.1); overflow: hidden; }
-.season-line span, .meter span { display: block; width: 100%; height: 100%; transform-origin: left; background: linear-gradient(90deg, var(--ice), var(--ice-bright)); transition: transform .8s var(--ease-heavy); }
-.hero-panel__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.hero-panel__stats div { display: grid; gap: 4px; }
-.hero-panel__stats strong { font: 400 24px var(--display); }
-.hero-panel__stats span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
-.daily-overview { display: grid; justify-items: center; gap: 24px; padding: 24px 6px; text-align: center; }
-.daily-overview__copy h2, .section-heading h2, .rival-card h2, .consistency-card h2 { margin: 6px 0; font: 400 24px/1.1 var(--display); }
-.daily-overview__copy h2 { max-width: 280px; text-wrap: balance; }
-.daily-overview__copy p { max-width: 260px; margin: 8px auto 0; color: var(--muted); font-size: 14px; line-height: 20px; text-wrap: balance; }
+.section-heading h2, .consistency-card h2 { margin: 6px 0; font: 400 24px/1.1 var(--display); }
 .section-block { display: grid; gap: 18px; }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
 .section-heading > span { color: var(--silver); font: 400 18px var(--display); }
-.challenge-stack, .challenge-grid { display: grid; gap: 10px; padding-inline: 9px; }
+.challenge-grid { display: grid; gap: 10px; padding-inline: 9px; }
 .challenge-card { min-height: 60px; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 13px; overflow: hidden; border: 1px solid rgba(255,255,255,.022); border-radius: 16px; padding: 10px 14px; background: #151516; box-shadow: inset 0 1px rgba(255,255,255,.015); transition: border-color .35s ease, background .35s ease; }
 .challenge-card h3 { min-width: 0; margin: 0; overflow: hidden; color: #aaa7a8; font: 400 12px/16px var(--body); letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
 .challenge-card__title--complete { color: #747174 !important; text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: #747174; }
@@ -133,11 +113,6 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .complete-button:not(:disabled):active { transform: scale(.94); }
 .challenge-card.is-complete .complete-button { border-color: #d91f55; background: #d91f55; box-shadow: 0 3px 10px rgba(217,31,85,.12); }
 .complete-button:disabled { cursor: default; }
-.rival-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px; border-radius: 18px; background: linear-gradient(120deg, #12171a, #0a0c0e); border: 1px solid rgba(168,216,232,.12); }
-.rival-card h2 { max-width: 260px; font-size: 22px; }
-.rival-rank { display: grid; justify-items: center; gap: 7px; }
-.rival-rank span { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: #1e292e; color: var(--ice); font-size: 11px; }
-.rival-rank strong { font: 400 17px var(--display); }
 .page-header { padding: 32px 4px 8px; text-align: center; }
 .page-header h1 { margin: 0; font-size: clamp(44px, 13vw, 58px); }
 .page-header--center { text-align: center; display: grid; justify-items: center; }
@@ -227,8 +202,6 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 @keyframes page-in { from { opacity: 0; transform: translateY(18px); filter: blur(5px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
 @keyframes loading { from { transform: translateX(-110%); } to { transform: translateX(210%); } }
 @media (min-width: 560px) {
-  .daily-overview { grid-template-columns: 142px minmax(0, 1fr); justify-items: stretch; gap: 36px; padding: 34px 6px; text-align: left; }
-  .daily-overview__copy p { margin-inline: 0; }
 }
 @media (min-width: 760px) {
   .app-frame { padding: 0 30px calc(144px + var(--safe-bottom)); }
@@ -237,7 +210,7 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
   .page-header { padding: 78px 8px 26px; }
   .page-header h1 { margin: 0; font-size: clamp(52px, 14vw, 94px); }
   .section-block { gap: 26px; }
-  .challenge-stack, .challenge-grid { gap: 12px; padding-inline: 12px; }
+  .challenge-grid { gap: 12px; padding-inline: 12px; }
   .challenge-card { min-height: 62px; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 14px; border-radius: 17px; padding: 11px 15px; }
   .complete-button { width: 30px; height: 30px; }
   .leaderboard-page { gap: 24px; }
@@ -268,12 +241,11 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
   .intro-dots { --dot-size: 9px; --dot-gap: 6px; }
   .intro-footer { padding-bottom: max(28px, env(safe-area-inset-bottom)); }
   .auth-header { padding-top: max(50px, env(safe-area-inset-top)); }
-  .app-frame { padding-inline: 30px; } .hero-panel { min-height: 580px; padding: 70px 60px 40px; border-radius: 34px; }
-  .hero-panel h1 { margin: 64px 0 20px; }
-  .season-line { margin: 64px 0 30px; }
-  .hero-panel__stats { max-width: 520px; } .daily-overview { max-width: 560px; margin: 10px auto; }
-  .challenge-stack, .challenge-grid { grid-template-columns: repeat(2, 1fr); } .challenge-card--feature { grid-column: span 2; }
-  .rival-card { padding: 38px 46px; } .rank-list, .consistency-card { width: min(100%, 760px); margin-inline: auto; } .page-header { padding-top: 78px; }
+  .app-frame { padding-inline: 30px; }
+  .challenge-grid { grid-template-columns: repeat(2, 1fr); }
+  .challenge-card--feature { grid-column: span 2; }
+  .rank-list, .consistency-card { width: min(100%, 760px); margin-inline: auto; }
+  .page-header { padding-top: 78px; }
   .admin-grid, .account-settings__grid { grid-template-columns: 1fr 1fr; } .admin-form, .review-queue, .admin-challenges { padding: 30px; }
 }
 @media (max-height: 650px) {

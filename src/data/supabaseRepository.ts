@@ -98,7 +98,6 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
         profile: { id: user.id, playerCode: profile.player_code, displayName, initials: displayName.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(), isAdmin: false },
         dayNumber, totalDays: 100, daysRemaining: 100 - dayNumber, points: me?.points ?? 0, rank: me?.rank ?? ranks.length,
         streak: 0, completionRate: dailyCount ? Math.round((completedDaily / dailyCount) * 100) : 0,
-        todayChallenges: challenges.filter((challenge) => challenge.frequency === 'daily'),
         nearestRival: me && me.rank > 1 ? ranks[me.rank - 2] : undefined,
       }
     },
