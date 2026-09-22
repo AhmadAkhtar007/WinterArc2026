@@ -6,4 +6,6 @@ dist/
 *.log
 *-preview.png
 *.tsbuildinfo
+.chrome-debug-profile*/
+*-debug.png
 supabase/.temp/

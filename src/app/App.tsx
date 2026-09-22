@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import type { AppRepository } from '../data/appRepository'
-import { createPreviewRepository } from '../data/previewRepository'
 import { createSupabaseRepository } from '../data/supabaseRepository'
 import { isSupabaseConfigured, supabase } from '../data/supabaseClient'
 import { AuthPage } from '../auth/AuthPage'
@@ -13,14 +12,10 @@ interface AppProps { repository?: AppRepository }
 
 export function App({ repository }: AppProps) {
   if (repository) return <AppShell repository={repository} />
-  if (!isSupabaseConfigured || !supabase) return <PreviewApp />
+  if (!isSupabaseConfigured || !supabase) return <main className="loading-screen"><BrandMark /><p>Supabase is not configured</p></main>
   return <ConnectedApp />
 }
 
-function PreviewApp() {
-  const repository = useRef(createPreviewRepository())
-  return <AppShell repository={repository.current} />
-}
 
 function ConnectedApp() {
   const { session, loading } = useSession()

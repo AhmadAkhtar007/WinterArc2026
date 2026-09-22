@@ -14,12 +14,15 @@ begin
   if has_table_privilege('authenticated', 'public.completions', 'INSERT') then raise exception 'Authenticated users must score through RPC only'; end if;
   if not has_function_privilege('authenticated', 'public.complete_challenge(uuid)', 'EXECUTE') then raise exception 'Authenticated users need completion RPC'; end if;
   if has_function_privilege('anon', 'public.complete_challenge(uuid)', 'EXECUTE') then raise exception 'Anon must not execute completion RPC'; end if;
+  if has_table_privilege('authenticated', 'public.challenges', 'INSERT') then raise exception 'Player-only mode must block challenge creation'; end if;
+  if has_function_privilege('authenticated', 'public.review_completion(uuid, public.completion_status)', 'EXECUTE') then raise exception 'Player-only mode must block review RPC'; end if;
   if not has_function_privilege('anon', 'public.resolve_player_login(text)', 'EXECUTE') then raise exception 'Anon needs Player ID login resolution'; end if;
   if not exists (
     select 1 from information_schema.columns
     where table_schema = 'public' and table_name = 'profiles' and column_name = 'player_code'
   ) then raise exception 'Profiles need permanent player codes'; end if;
-  if to_regprocedure('private.sync_admin_game_name()') is null then raise exception 'Admin game-name synchronization is missing'; end if;
+  if to_regprocedure('private.sync_admin_game_name()') is not null then raise exception 'Admin game-name synchronization must be removed'; end if;
+  if to_regprocedure('public.player_challenges()') is null then raise exception 'Player challenge RPC is missing'; end if;
 end $$;
 
 rollback;

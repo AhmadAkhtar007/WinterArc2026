@@ -16,6 +16,18 @@ const dashboard: DashboardSnapshot = {
 }
 
 describe('ProfilePage account controls', () => {
+  it('shows four life dimensions instead of redundant leaderboard metrics', () => {
+    render(<ProfilePage dashboard={dashboard} onSignOut={vi.fn()} onUpdateDisplayName={vi.fn()} onUpdatePassword={vi.fn()} />)
+
+    expect(screen.getByRole('heading', { name: 'Life balance' })).toBeInTheDocument()
+    expect(screen.getByText('Body')).toBeInTheDocument()
+    expect(screen.getByText('Mind')).toBeInTheDocument()
+    expect(screen.getByText('Soul')).toBeInTheDocument()
+    expect(screen.getByText('Craft')).toBeInTheDocument()
+    expect(screen.queryByText('XP earned')).not.toBeInTheDocument()
+    expect(screen.queryByText('season rank')).not.toBeInTheDocument()
+  })
+
   it('shows the permanent player id and updates the display name', async () => {
     const updateDisplayName = vi.fn().mockResolvedValue(undefined)
     render(<ProfilePage dashboard={dashboard} onSignOut={vi.fn()} onUpdateDisplayName={updateDisplayName} onUpdatePassword={vi.fn()} />)

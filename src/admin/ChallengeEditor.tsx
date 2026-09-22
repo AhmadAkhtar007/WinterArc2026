@@ -14,7 +14,7 @@ export function ChallengeEditor({ onCreate }: { onCreate: (input: ChallengeInput
     } finally { setBusy(false) }
   }
   return <form className="admin-form" onSubmit={submit}>
-    <div className="admin-form__heading"><span className="section-kicker">Publish</span><h2>New challenge</h2></div>
+    <div className="admin-form__heading"><h2>New challenge</h2></div>
     <label>Title<input name="title" required minLength={2} maxLength={80} placeholder="100 push-ups" /></label>
     <label>Instructions<textarea name="description" required minLength={2} maxLength={500} placeholder="Define exactly what counts." /></label>
     <div className="form-row"><label>Frequency<select name="frequency" defaultValue="daily"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="once">Season</option></select></label><label>XP<input name="points" type="number" min="1" max="5000" defaultValue="10" required /></label></div>

@@ -18,7 +18,7 @@ describe('administrator workflow', () => {
     const base = createPreviewRepository()
     const playerRepository = { ...base, getDashboard: async () => { const dashboard = await base.getDashboard(); return { ...dashboard, profile: { ...dashboard.profile, isAdmin: false } } } }
     render(<App repository={playerRepository} />)
-    await screen.findByRole('heading', { name: /enter the cold/i })
+    await screen.findByLabelText('Challenge filters')
     await waitFor(() => expect(screen.queryByRole('button', { name: /command/i })).not.toBeInTheDocument())
   })
 })

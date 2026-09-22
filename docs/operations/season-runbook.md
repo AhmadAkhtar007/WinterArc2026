@@ -2,7 +2,7 @@
 
 ## Before opening access
 
-1. Apply the migration and run the Supabase database tests and security advisors.
+1. Apply every migration in `supabase/migrations/` in filename order, then run the Supabase database tests and security advisors.
 2. Configure the web host with HTTPS and SPA fallback.
 3. Create your account, assign `app_metadata.role = admin`, and sign in again.
 4. Create participant accounts or send Auth invitations.

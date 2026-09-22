@@ -4,7 +4,9 @@ import type { Challenge, ChallengeInput, Completion, DashboardSnapshot, Leaderbo
 
 type ChallengeRow = {
   id: string; title: string; description: string; frequency: Challenge['frequency']; points: number;
-  requires_approval: boolean; starts_on: string; ends_on: string; archived_at: string | null
+  requires_approval: boolean; starts_on: string; ends_on: string; archived_at: string | null;
+  completion_id?: string | null; completion_period_key?: string | null; completion_points_awarded?: number | null;
+  completion_status?: Completion['status'] | null; completion_completed_at?: string | null
 }
 
 type CompletionRow = {
@@ -28,6 +30,19 @@ function mapChallenge(row: ChallengeRow, completion?: CompletionRow): Challenge 
     id: row.id, title: row.title, description: row.description, frequency: row.frequency, points: row.points,
     requiresApproval: row.requires_approval, category: row.frequency === 'once' ? 'craft' : 'discipline',
     metric: row.frequency === 'once' ? 'Season quest' : row.frequency, completed: Boolean(completion), status: completion?.status,
+  }
+}
+
+function completionFromChallenge(row: ChallengeRow): CompletionRow | undefined {
+  if (!row.completion_id || !row.completion_period_key || !row.completion_status || !row.completion_completed_at) return undefined
+  return {
+    id: row.completion_id,
+    user_id: '',
+    challenge_id: row.id,
+    period_key: row.completion_period_key,
+    points_awarded: row.completion_points_awarded ?? row.points,
+    status: row.completion_status,
+    completed_at: row.completion_completed_at,
   }
 }
 
@@ -62,14 +77,10 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
 
   const repository: AppRepository = {
     async getChallenges() {
-      const user = await currentUser()
-      const today = todayInKarachi()
-      const [{ data: rows, error }, { data: completionRows, error: completionError }] = await Promise.all([
-        client.from('challenges').select('*').is('archived_at', null).lte('starts_on', today).gte('ends_on', today).order('points'),
-        client.from('completions').select('*').eq('user_id', user.id).neq('status', 'reversed'),
-      ])
-      if (error || completionError) throw new Error('Challenges could not be loaded.')
-      return ((rows ?? []) as ChallengeRow[]).map((row) => mapChallenge(row, (completionRows as CompletionRow[] | null)?.find((completion) => completion.challenge_id === row.id)))
+      await currentUser()
+      const { data: rows, error } = await client.rpc('player_challenges')
+      if (error) throw new Error('Challenges could not be loaded.')
+      return ((rows ?? []) as ChallengeRow[]).map((row) => mapChallenge(row, completionFromChallenge(row)))
     },
     async getLeaderboard() { return leaderboard() },
     async getDashboard(): Promise<DashboardSnapshot> {
@@ -84,7 +95,7 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
       const dailyCount = challenges.filter((challenge) => challenge.frequency === 'daily').length
       const displayName = profile.display_name
       return {
-        profile: { id: user.id, playerCode: profile.player_code, displayName, initials: displayName.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(), isAdmin: user.app_metadata.role === 'admin' },
+        profile: { id: user.id, playerCode: profile.player_code, displayName, initials: displayName.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(), isAdmin: false },
         dayNumber, totalDays: 100, daysRemaining: 100 - dayNumber, points: me?.points ?? 0, rank: me?.rank ?? ranks.length,
         streak: 0, completionRate: dailyCount ? Math.round((completedDaily / dailyCount) * 100) : 0,
         todayChallenges: challenges.filter((challenge) => challenge.frequency === 'daily'),

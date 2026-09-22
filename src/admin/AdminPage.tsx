@@ -14,9 +14,9 @@ export function AdminPage({ repository }: { repository: AppRepository }) {
   async function archive(id: string) { await repository.archiveChallenge(id); setMessage('Challenge archived.'); await refresh() }
   async function review(id: string, decision: 'confirmed' | 'reversed') { await repository.reviewCompletion(id, decision); setMessage(decision === 'confirmed' ? 'XP confirmed.' : 'Submission rejected.'); await refresh() }
   return <div className="page admin-page">
-    <header className="page-header"><span className="section-kicker">Administrator</span><h1>Command the<br /><em>season.</em></h1><p>Publish the work. Verify the exceptional. Let the system calculate the rest.</p></header>
+    <header className="page-header"><h1>Command the<br /><em>season.</em></h1></header>
     {message && <button className="success-banner" type="button" onClick={() => setMessage('')}>{message}<span>×</span></button>}
     <div className="admin-grid"><ChallengeEditor onCreate={create} /><ReviewQueue items={pending} onReview={review} /></div>
-    <section className="admin-challenges"><div className="admin-form__heading"><span className="section-kicker">Live protocol</span><h2>Active challenges</h2></div>{challenges.map((challenge) => <article key={challenge.id}><div><strong>{challenge.title}</strong><span>{challenge.frequency} · {challenge.points} XP{challenge.requiresApproval ? ' · proof required' : ''}</span></div><button type="button" onClick={() => void archive(challenge.id)}>Archive</button></article>)}</section>
+    <section className="admin-challenges"><div className="admin-form__heading"><h2>Active challenges</h2></div>{challenges.map((challenge) => <article key={challenge.id}><div><strong>{challenge.title}</strong><span>{challenge.frequency} · {challenge.points} XP{challenge.requiresApproval ? ' · proof required' : ''}</span></div><button type="button" onClick={() => void archive(challenge.id)}>Archive</button></article>)}</section>
   </div>
 }

@@ -6,12 +6,11 @@ import { BottomNavigation } from '../components/BottomNavigation'
 import { ChallengesPage } from '../pages/ChallengesPage'
 import { LeaderboardPage } from '../pages/LeaderboardPage'
 import { ProfilePage } from '../pages/ProfilePage'
-import { TodayPage } from '../pages/TodayPage'
 import { AdminPage } from '../admin/AdminPage'
 import type { AppRoute } from './navigation'
 
 export function AppShell({ repository }: { repository: AppRepository }) {
-  const [route, setRoute] = useState<AppRoute>('today')
+  const [route, setRoute] = useState<AppRoute>('challenges')
   const [dashboard, setDashboard] = useState<DashboardSnapshot | null>(null)
   const [challenges, setChallenges] = useState<Challenge[]>([])
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
@@ -54,13 +53,12 @@ export function AppShell({ repository }: { repository: AppRepository }) {
   return (
     <div className="app-frame">
       <div className="grain" aria-hidden="true" />
-      <header className="topbar">
+      <header className="topbar topbar--centered">
         <BrandMark compact />
-        <div className="topbar__actions">{dashboard.profile.isAdmin && <button className="admin-switch" type="button" onClick={() => setRoute('admin')}>Command</button>}<button className="profile-chip" type="button" onClick={() => setRoute('profile')} aria-label="Open profile"><span>{dashboard.profile.initials}</span></button></div>
+        {dashboard.profile.isAdmin && <div className="topbar__actions"><button className="admin-switch" type="button" onClick={() => setRoute('admin')}>Command</button></div>}
       </header>
       {error && <button className="error-banner" type="button" onClick={() => setError(null)}>{error}<span aria-hidden="true">×</span></button>}
       <main className="page-stage" key={route}>
-        {route === 'today' && <TodayPage dashboard={dashboard} busyChallenge={busyChallenge} onComplete={completeChallenge} />}
         {route === 'challenges' && <ChallengesPage challenges={challenges} busyChallenge={busyChallenge} onComplete={completeChallenge} />}
         {route === 'leaderboard' && <LeaderboardPage entries={leaderboard} />}
         {route === 'profile' && <ProfilePage dashboard={dashboard} onSignOut={() => repository.signOut()} onUpdateDisplayName={async (displayName) => { await repository.updateDisplayName(displayName); await refresh() }} onUpdatePassword={(currentPassword, password) => repository.updatePassword(currentPassword, password)} />}
