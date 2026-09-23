@@ -2,7 +2,7 @@
 
 Winter Arc is a mobile-first PWA for the final 100 days of 2026. Players complete daily, weekly, and season challenges; confirmed XP powers the ranks; exceptional work can require proof reviewed through WhatsApp.
 
-This repository is the local v1.0 baseline. See [docs/v1-baseline.md](docs/v1-baseline.md) for the boundaries and upgrade rules that apply from here onward.
+This repository contains the Winter Arc 2026 progressive web application backed by Supabase.
 
 ## Development
 
@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Without environment variables, the app runs in an interactive preview mode with representative players and challenges.
+Local development connects to Supabase using settings defined in `.env.local`. Copy `.env.example` to `.env.local` and provide your project URL and publishable key.
 
 ## Verification
 

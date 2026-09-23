@@ -1,12 +1,24 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { createPreviewRepository } from '../data/previewRepository'
-import { App } from './App'
+import { describe, expect, it, vi } from 'vitest'
+import { createTestRepository } from '../test/testRepository'
+import { AppShell } from './AppShell'
 
 describe('Winter Arc application', () => {
+  it('renders missing connection settings when Supabase is not configured', async () => {
+    vi.resetModules()
+    vi.doMock('../data/supabaseClient', () => ({
+      isSupabaseConfigured: false,
+      supabase: null,
+    }))
+    const { App } = await import('./App')
+    render(<App />)
+    expect(screen.getByText('This build is missing its Supabase connection settings.')).toBeInTheDocument()
+    vi.doUnmock('../data/supabaseClient')
+  })
+
   it('starts empty and adds an irreversible challenge commitment from the catalog', async () => {
-    const repository = createPreviewRepository()
-    render(<App repository={repository} />)
+    const repository = createTestRepository()
+    render(<AppShell repository={repository} />)
     expect(await screen.findByLabelText('Challenge filters')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Deep work block' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Add challenge' }))
@@ -35,7 +47,10 @@ describe('Winter Arc application', () => {
 
   it('updates a binary card before the uncompletion request settles', async () => {
     let resolveUncompletion: (() => void) | undefined
-    const repository = createPreviewRepository()
+    const repository = createTestRepository()
+    await repository.enrollChallenge('deep-work')
+    await repository.completeChallenge('deep-work', '2026-09-24')
+
     const uncompleteChallenge = repository.uncompleteChallenge
     repository.uncompleteChallenge = async (challengeId, periodKey) => {
       const result = uncompleteChallenge.call(repository, challengeId, periodKey)
@@ -43,8 +58,7 @@ describe('Winter Arc application', () => {
       return result
     }
 
-    await repository.enrollChallenge('deep-work')
-    render(<App repository={repository} />)
+    render(<AppShell repository={repository} />)
 
     const uncompleteButton = await screen.findByRole('button', { name: 'Mark Deep work block incomplete' })
     fireEvent.click(uncompleteButton)
@@ -55,9 +69,9 @@ describe('Winter Arc application', () => {
   })
 
   it('renders season proof challenges with a submit control', async () => {
-    const repository = createPreviewRepository()
+    const repository = createTestRepository()
     await Promise.all(['ship-product', '5k-run', 'half-marathon', 'full-marathon'].map((id) => repository.enrollChallenge(id)))
-    render(<App repository={repository} />)
+    render(<AppShell repository={repository} />)
 
     fireEvent.click(await screen.findByRole('button', { name: 'Season' }))
     expect(await screen.findByRole('heading', { name: 'Run a Full-Marathon' })).toBeInTheDocument()
