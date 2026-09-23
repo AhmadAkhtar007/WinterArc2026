@@ -4,14 +4,16 @@ import { App } from '../app/App'
 import { createPreviewRepository } from '../data/previewRepository'
 
 describe('administrator workflow', () => {
-  it('publishes a new challenge', async () => {
-    render(<App repository={createPreviewRepository()} />)
+  it('approves a pending proof submission', async () => {
+    const repository = createPreviewRepository()
+    await repository.enrollChallenge('5k-run')
+    await repository.completeChallenge('5k-run')
+    render(<App repository={repository} />)
+
     fireEvent.click(await screen.findByRole('button', { name: /command/i }))
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Read twenty pages' } })
-    fireEvent.change(screen.getByLabelText('Instructions'), { target: { value: 'Read twenty intentional pages.' } })
-    fireEvent.click(screen.getByRole('button', { name: /publish challenge/i }))
-    expect(await screen.findByText('Challenge published.')).toBeInTheDocument()
-    expect(screen.getByText('Read twenty pages')).toBeInTheDocument()
+    expect(await screen.findByText('Compete in a 5K run')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    expect(await screen.findByText('XP confirmed.')).toBeInTheDocument()
   })
 
   it('hides command access from normal players', async () => {

@@ -62,6 +62,14 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .admin-switch { position: relative; min-height: 36px; border: 1px solid rgba(168,216,232,.16); border-radius: 999px; padding: 0 12px; background: rgba(168,216,232,.06); color: var(--ice); font-size: 12px; text-transform: uppercase; letter-spacing: .1em; cursor: pointer; }
 .page-stage { max-width: 1080px; margin: 0 auto; animation: page-in .75s var(--ease-heavy) both; }
 .page { display: grid; gap: 28px; }
+.add-challenge-button { justify-self: center; min-height: 40px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(168,216,232,.2); border-radius: 999px; padding: 0 16px; background: rgba(168,216,232,.05); color: var(--ice); font-size: 11px; cursor: pointer; }
+.commit-block { justify-self: center; display: grid; gap: 10px; justify-items: center; text-align: center; }
+.commit-actions { display: flex; align-items: center; gap: 10px; }
+.commit-actions .secondary-button { min-height: 44px; padding: 0 22px; }
+.commit-actions .primary-button { min-height: 44px; padding: 0 26px; }
+.commit-actions .primary-button:disabled { opacity: .4; cursor: default; }
+.commit-note { margin: 0; max-width: 330px; color: var(--muted); font-size: 11px; line-height: 15px; }
+.commit-empty { margin: 0; padding: 24px 0; color: var(--muted); font-size: 12px; text-align: center; }
 .loading-screen { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 20px; background: radial-gradient(circle, #101b20, var(--black) 44%); }
 .loading-screen p { color: var(--silver); letter-spacing: .12em; text-transform: uppercase; font-size: 11px; }
 .loading-line { width: 160px; height: 2px; background: #222; overflow: hidden; }
@@ -100,19 +108,62 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
 .section-heading > span { color: var(--silver); font: 400 18px var(--display); }
 .challenge-grid { display: grid; gap: 10px; padding-inline: 9px; }
-.challenge-card { min-height: 60px; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 13px; overflow: hidden; border: 1px solid rgba(255,255,255,.022); border-radius: 16px; padding: 10px 14px; background: #151516; box-shadow: inset 0 1px rgba(255,255,255,.015); transition: border-color .35s ease, background .35s ease; }
+.challenge-card { min-height: 60px; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.022); border-radius: 16px; padding: 10px 14px; background: #151516; box-shadow: inset 0 1px rgba(255,255,255,.015); transition: border-color .35s ease, background .35s ease; }
 .challenge-card h3 { min-width: 0; margin: 0; overflow: hidden; color: #aaa7a8; font: 400 12px/16px var(--body); letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
 .challenge-card__title--complete { color: #747174 !important; text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: #747174; }
-.challenge-card.is-complete { border-color: rgba(224,34,91,.04); background: linear-gradient(90deg, #151516 76%, rgba(224,34,91,.065)); }
 .meter { height: 3px; margin-top: 9px; border-radius: 9px; overflow: hidden; background: #22282c; }
-.points { color: #68142c; font: 700 9px/14px var(--body); letter-spacing: .04em; white-space: nowrap; }
-.complete-button { position: relative; width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid rgba(168,216,232,.18); border-radius: 50%; padding: 0; background: #191b1d; color: #fff; cursor: pointer; transition: transform .2s ease, border-color .3s ease, background .3s ease; }
+.points { color: var(--ice); font: 700 9px/14px var(--body); letter-spacing: .04em; white-space: nowrap; }
+.complete-button { position: relative; width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid rgba(168,216,232,.18); border-radius: 50%; padding: 0; background: #191b1d; color: #fff; cursor: pointer; transition: transform .2s ease, border-color .3s ease, background .3s ease; }
 .complete-button::after { content: ''; position: absolute; width: 44px; height: 44px; }
-.complete-button span { display: grid; place-items: center; color: inherit; font-size: 13px; font-weight: 800; line-height: 1; }
+.complete-button span { display: grid; place-items: center; color: inherit; font-size: 10px; font-weight: 800; line-height: 1; }
 .complete-button:not(:disabled):hover { border-color: rgba(216,245,255,.46); background: #202326; }
 .complete-button:not(:disabled):active { transform: scale(.94); }
-.challenge-card.is-complete .complete-button { border-color: #d91f55; background: #d91f55; box-shadow: 0 3px 10px rgba(217,31,85,.12); }
+.challenge-card.is-complete .complete-button { border-color: var(--ice); background: var(--ice); color: var(--black); box-shadow: 0 3px 10px rgba(168,216,232,.12); }
 .complete-button:disabled { cursor: default; }
+.tracked-card { position: relative; min-height: 76px; grid-template-rows: auto auto 3px; row-gap: 5px; cursor: pointer; }
+.tracked-card .tracked-card__action { grid-column: 1; grid-row: 1 / 4; align-self: center; }
+.tracked-card h3 { grid-column: 2; grid-row: 1; align-self: end; }
+.tracked-card > .points { grid-column: 3; grid-row: 1; align-self: end; }
+.tracked-card__timer { color: var(--ice-bright); font-variant-numeric: tabular-nums; letter-spacing: .08em; }
+.tracked-card__failed { color: var(--danger); letter-spacing: .08em; }
+.tracked-card__progress { grid-column: 2 / 4; grid-row: 2; color: var(--muted); font-size: 10px; line-height: 14px; }
+.tracked-card.is-editing { border-color: rgba(168,216,232,.28); background: #181b1d; box-shadow: inset 0 1px rgba(216,245,255,.05), 0 10px 30px rgba(0,0,0,.16); }
+.tracked-card__inline-entry { grid-column: 2 / 4; grid-row: 2; min-width: 0; display: flex; align-items: baseline; gap: 8px; color: var(--ice); }
+.tracked-card__inline-entry input { min-width: 0; width: 100%; border: 0; border-bottom: 1px solid rgba(168,216,232,.32); outline: 0; padding: 0 0 3px; background: transparent; color: var(--bone); font: 400 18px/20px var(--display); }
+.tracked-card__inline-entry input:focus { border-color: var(--ice-bright); }
+.tracked-card__inline-entry input::-webkit-inner-spin-button,
+.tracked-card__inline-entry input::-webkit-outer-spin-button { margin: 0; appearance: none; }
+.tracked-card__inline-entry input[type='number'] { appearance: textfield; }
+.tracked-card__inline-entry strong { flex: 0 0 auto; color: var(--muted); font-size: 10px; font-weight: 500; text-transform: lowercase; }
+.tracked-card__meter { grid-column: 2 / 4; grid-row: 3; display: block; height: 3px; overflow: hidden; border-radius: 999px; background: #22282c; }
+.tracked-card__meter i { display: block; height: 100%; border-radius: inherit; background: var(--ice); transition: width .35s var(--ease-heavy); }
+.tracked-card.is-complete .tracked-card__action { border-color: var(--ice); background: var(--ice); color: var(--black); box-shadow: 0 3px 10px rgba(168,216,232,.12); }
+.tracked-card.is-locked { cursor: default; }
+.season-proof-card { min-height: 76px; grid-template-rows: auto auto; row-gap: 3px; }
+.season-proof-card .season-proof-card__action { grid-column: 1; grid-row: 1 / 3; align-self: center; }
+.season-proof-card h3 { grid-column: 2; grid-row: 1; align-self: end; }
+.season-proof-card > .points { grid-column: 3; grid-row: 1; align-self: end; }
+.season-proof-card__instruction { grid-column: 2 / 4; grid-row: 2; color: var(--ice); font-size: 10px; line-height: 14px; }
+.challenge-card.is-pending { border-color: rgba(239,123,69,.16); }
+.challenge-card.is-pending .complete-button { border-color: rgba(239,123,69,.4); color: var(--ember); }
+.challenge-card.is-pending .points { color: var(--ember); }
+.challenge-card.is-rejected { border-color: rgba(224,101,101,.16); }
+.challenge-card.is-rejected .complete-button { border-color: rgba(224,101,101,.4); color: var(--danger); }
+.challenge-card.is-rejected .points { color: var(--muted); }
+.season-proof-card.is-pending .season-proof-card__instruction { color: var(--ember); }
+.season-proof-card.is-rejected .season-proof-card__instruction { color: var(--danger); }
+.modal-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 24px; background: rgba(2,3,4,.74); backdrop-filter: blur(8px); }
+.modal { width: min(100%, 420px); max-height: min(80dvh, 640px); overflow-y: auto; display: grid; gap: 20px; border: 1px solid rgba(168,216,232,.14); border-radius: 24px; padding: 24px; background: #0d1012; box-shadow: 0 30px 80px rgba(0,0,0,.6); outline: none; }
+.modal h2 { margin: 0; color: var(--bone); font: 400 25px/1.15 var(--display); }
+.modal__list { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.modal__list li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 9px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.modal__list li > div { display: grid; gap: 2px; min-width: 0; }
+.modal__list strong { overflow: hidden; color: #dedbd5; font: 400 13px/17px var(--body); text-overflow: ellipsis; white-space: nowrap; }
+.modal__list small { color: var(--muted); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+.modal__list li > span { color: var(--ice); font: 700 10px/14px var(--body); white-space: nowrap; }
+.modal__stakes { margin: 0; color: var(--silver); font-size: 11px; line-height: 16px; }
+.modal__actions { display: grid; gap: 8px; }
+.section-kicker { color: var(--ice); font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; }
 .page-header { padding: 32px 4px 8px; text-align: center; }
 .page-header h1 { margin: 0; font-size: clamp(44px, 13vw, 58px); }
 .page-header--center { text-align: center; display: grid; justify-items: center; }
@@ -174,22 +225,14 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .heatmap span.is-complete { background: var(--ice); box-shadow: 0 0 8px rgba(168,216,232,.2); }
 .heatmap span.is-today { background: transparent; border: 1px solid var(--ember); }
 .secondary-button { position: relative; min-height: 40px; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; background: transparent; color: var(--silver); font-size: 14px; cursor: pointer; }
-.admin-grid { display: grid; gap: 26px; }
-.admin-form, .review-queue, .admin-challenges { display: grid; align-content: start; gap: 24px; padding: 32px; border: 1px solid rgba(255,255,255,.07); border-radius: 28px; background: #0b0e10; }
+.review-queue { display: grid; align-content: start; gap: 24px; padding: 32px; border: 1px solid rgba(255,255,255,.07); border-radius: 28px; background: #0b0e10; }
 .admin-form__heading h2 { margin: 7px 0 4px; font: 400 30px var(--display); }
-.admin-form label { display: grid; gap: 8px; color: var(--silver); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
-.admin-form input:not([type='checkbox']), .admin-form textarea, .admin-form select { min-height: 50px; width: 100%; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 12px 14px; background: #111518; color: var(--bone); outline: none; }
-.admin-form textarea { min-height: 100px; resize: vertical; }
-.admin-form input:focus, .admin-form textarea:focus, .admin-form select:focus { border-color: var(--ice); }
-.form-row { display: grid; grid-template-columns: 1fr 100px; gap: 12px; }
-.admin-form .check-row { display: flex; align-items: center; gap: 10px; min-height: 44px; color: var(--silver); font-size: 10px; line-height: 1.4; letter-spacing: 0; text-transform: none; }
-.check-row input { width: 18px; height: 18px; accent-color: var(--ice); }
-.review-queue article, .admin-challenges article { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 70px; padding: 14px 0; border-top: 1px solid rgba(255,255,255,.06); }
-.review-queue article > div:first-child, .admin-challenges article > div { display: grid; gap: 4px; }
-.review-queue article strong, .admin-challenges article strong { font: 400 17px var(--display); }
-.review-queue article span, .admin-challenges article span { color: var(--muted); font-size: 9px; }
+.review-queue article { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 70px; padding: 14px 0; border-top: 1px solid rgba(255,255,255,.06); }
+.review-queue article > div:first-child { display: grid; gap: 4px; }
+.review-queue article strong { font: 400 17px var(--display); }
+.review-queue article span { color: var(--muted); font-size: 9px; }
 .review-queue article > div:last-child { display: flex; gap: 6px; }
-.review-queue button, .admin-challenges button { min-height: 40px; border: 1px solid rgba(255,255,255,.09); border-radius: 999px; padding: 0 13px; background: transparent; color: var(--silver); font-size: 9px; cursor: pointer; }
+.review-queue button { min-height: 40px; border: 1px solid rgba(255,255,255,.09); border-radius: 999px; padding: 0 13px; background: transparent; color: var(--silver); font-size: 9px; cursor: pointer; }
 .review-queue button.approve { border-color: transparent; background: var(--bone); color: var(--black); }
 .empty-state { min-height: 180px; display: grid; place-content: center; justify-items: center; gap: 10px; color: var(--muted); }
 .empty-state span { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: rgba(155,199,122,.1); color: var(--success); }
@@ -211,8 +254,7 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
   .page-header h1 { margin: 0; font-size: clamp(52px, 14vw, 94px); }
   .section-block { gap: 26px; }
   .challenge-grid { gap: 12px; padding-inline: 12px; }
-  .challenge-card { min-height: 62px; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 14px; border-radius: 17px; padding: 11px 15px; }
-  .complete-button { width: 30px; height: 30px; }
+  .challenge-card { min-height: 62px; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 12px; border-radius: 17px; padding: 11px 15px; }
   .leaderboard-page { gap: 24px; }
   .leaderboard-header { padding-top: 42px; }
   .leaderboard-header h1 { font-size: 34px; }
@@ -246,7 +288,7 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
   .challenge-card--feature { grid-column: span 2; }
   .rank-list, .consistency-card { width: min(100%, 760px); margin-inline: auto; }
   .page-header { padding-top: 78px; }
-  .admin-grid, .account-settings__grid { grid-template-columns: 1fr 1fr; } .admin-form, .review-queue, .admin-challenges { padding: 30px; }
+  .account-settings__grid { grid-template-columns: 1fr 1fr; } .review-queue { padding: 30px; }
 }
 @media (max-height: 650px) {
   .intro-page { min-height: 520px; }

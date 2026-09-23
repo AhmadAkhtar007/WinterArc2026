@@ -17,7 +17,7 @@ const challenge: Challenge = {
 
 describe('ChallengeCard', () => {
   it('renders a compact action row with only the essential task information', () => {
-    render(<ChallengeCard challenge={challenge} onComplete={() => undefined} />)
+    render(<ChallengeCard challenge={challenge} onToggle={() => undefined} />)
 
     expect(screen.getByRole('heading', { name: challenge.title })).toBeInTheDocument()
     expect(screen.getByText('+10 XP')).toBeInTheDocument()
@@ -28,16 +28,19 @@ describe('ChallengeCard', () => {
     expect(screen.queryByText('Mark complete')).not.toBeInTheDocument()
   })
 
-  it('completes from the circular control and presents the completed state', () => {
-    const onComplete = vi.fn()
-    const { rerender } = render(<ChallengeCard challenge={challenge} onComplete={onComplete} />)
+  it('toggles completion from the circular control in both directions', () => {
+    const onToggle = vi.fn()
+    const { rerender } = render(<ChallengeCard challenge={challenge} onToggle={onToggle} />)
 
     fireEvent.click(screen.getByRole('button', { name: `Complete ${challenge.title}` }))
-    expect(onComplete).toHaveBeenCalledWith(challenge.id)
+    expect(onToggle).toHaveBeenLastCalledWith(challenge.id, true)
 
-    rerender(<ChallengeCard challenge={{ ...challenge, completed: true, status: 'confirmed' }} onComplete={onComplete} />)
-    expect(screen.getByRole('button', { name: `${challenge.title} completed` })).toBeDisabled()
-    expect(screen.getByText('✓')).toBeInTheDocument()
+    rerender(<ChallengeCard challenge={{ ...challenge, completed: true, status: 'confirmed' }} onToggle={onToggle} />)
+    const completedButton = screen.getByRole('button', { name: `Mark ${challenge.title} incomplete` })
+    expect(completedButton).toBeEnabled()
+    fireEvent.click(completedButton)
+    expect(onToggle).toHaveBeenLastCalledWith(challenge.id, false)
+    expect(completedButton.querySelector('svg')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: challenge.title })).toHaveClass('challenge-card__title--complete')
   })
 })

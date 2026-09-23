@@ -1,17 +1,28 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AppRepository } from './appRepository'
-import type { Challenge, ChallengeInput, Completion, DashboardSnapshot, LeaderboardEntry, PendingCompletion } from '../domain/types'
+import type { Challenge, Completion, DashboardSnapshot, LeaderboardEntry, PendingCompletion, ProgressEntry, RewardTier } from '../domain/types'
 
 type ChallengeRow = {
   id: string; title: string; description: string; frequency: Challenge['frequency']; points: number;
   requires_approval: boolean; starts_on: string; ends_on: string; archived_at: string | null;
   completion_id?: string | null; completion_period_key?: string | null; completion_points_awarded?: number | null;
-  completion_status?: Completion['status'] | null; completion_completed_at?: string | null
+  completion_status?: Completion['status'] | null; completion_completed_at?: string | null;
+  tracking_mode?: Challenge['trackingMode']; tracking_unit?: string | null; tracking_target?: number | null;
+  entry_options?: number[]; entry_step?: number | null; burst_limit?: number; minimum_interval_minutes?: number; reward_tiers?: RewardTier[];
+  progress?: number; secured_points?: number; cooldown_ends_at?: string | null; progress_entries?: ProgressEntry[]
+  attempt_ends_at?: string | null; attempt_failed?: boolean
 }
 
 type CompletionRow = {
   id: string; user_id: string; challenge_id: string; period_key: string; points_awarded: number;
   status: Completion['status']; completed_at: string
+}
+
+function localPeriodKey(date = new Date()): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function todayInKarachi(): string {
@@ -26,10 +37,20 @@ function seasonDay() {
 }
 
 function mapChallenge(row: ChallengeRow, completion?: CompletionRow): Challenge {
+  const trackingMode = row.tracking_mode ?? 'binary'
+  const progress = row.progress ?? 0
+  const target = row.tracking_target ?? undefined
   return {
     id: row.id, title: row.title, description: row.description, frequency: row.frequency, points: row.points,
     requiresApproval: row.requires_approval, category: row.frequency === 'once' ? 'craft' : 'discipline',
-    metric: row.frequency === 'once' ? 'Season quest' : row.frequency, completed: Boolean(completion), status: completion?.status,
+    metric: row.frequency === 'once' ? 'Season quest' : row.frequency,
+    completed: trackingMode === 'binary' ? Boolean(completion) : Boolean(target && progress >= target), status: completion?.status,
+    trackingMode, unitLabel: row.tracking_unit ?? undefined, target, entryOptions: row.entry_options ?? [],
+    entryStep: row.entry_step ?? undefined, burstLimit: row.burst_limit ?? 1, minimumIntervalMinutes: row.minimum_interval_minutes ?? 0, rewardTiers: row.reward_tiers ?? [],
+    progress, securedPoints: row.secured_points ?? 0, cooldownEndsAt: row.cooldown_ends_at ?? undefined,
+    attemptEndsAt: row.attempt_ends_at ?? undefined,
+    attemptFailed: row.attempt_failed ?? false,
+    progressEntries: row.progress_entries ?? [],
   }
 }
 
@@ -59,26 +80,32 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
 
   async function leaderboard(): Promise<LeaderboardEntry[]> {
     const user = await currentUser()
-    const [{ data: profiles, error: profileError }, { data: completions, error: completionError }] = await Promise.all([
-      client.from('profiles').select('id, display_name'),
-      client.from('completions').select('user_id, points_awarded, status').eq('status', 'confirmed'),
-    ])
-    if (profileError || completionError) throw new Error('Leaderboard could not be loaded.')
-    const totals = new Map<string, { points: number; count: number }>()
-    for (const item of completions ?? []) {
-      const current = totals.get(item.user_id) ?? { points: 0, count: 0 }
-      totals.set(item.user_id, { points: current.points + item.points_awarded, count: current.count + 1 })
-    }
-    return (profiles ?? []).map((profile) => {
-      const score = totals.get(profile.id) ?? { points: 0, count: 0 }
-      return { id: profile.id, rank: 0, displayName: profile.display_name, initials: profile.display_name.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(), points: score.points, completedCount: score.count, isCurrentPlayer: profile.id === user.id }
-    }).sort((a, b) => b.points - a.points || a.displayName.localeCompare(b.displayName)).map((entry, index) => ({ ...entry, rank: index + 1 }))
+    const { data, error } = await client.rpc('player_leaderboard')
+    if (error) throw new Error('Leaderboard could not be loaded.')
+    return ((data ?? []) as Array<{ id: string; display_name: string; points: number; completed_count: number }>).map((row, index) => ({
+      id: row.id,
+      rank: index + 1,
+      displayName: row.display_name,
+      initials: row.display_name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase(),
+      points: row.points,
+      completedCount: row.completed_count,
+      isCurrentPlayer: row.id === user.id,
+    }))
   }
-
   const repository: AppRepository = {
+    async getChallengeCatalog() {
+      await currentUser()
+      const { data, error } = await client.from('challenges').select('*').is('archived_at', null)
+      if (error) throw new Error('Challenge catalog could not be loaded.')
+      return ((data ?? []) as ChallengeRow[]).map((row) => mapChallenge(row))
+    },
+    async enrollChallenge(challengeId) {
+      const { error } = await client.rpc('enroll_challenge', { target_challenge_id: challengeId })
+      if (error) throw new Error(error.message)
+    },
     async getChallenges() {
       await currentUser()
-      const { data: rows, error } = await client.rpc('player_challenges')
+      const { data: rows, error } = await client.rpc('player_challenges', { target_period_key: localPeriodKey() })
       if (error) throw new Error('Challenges could not be loaded.')
       return ((rows ?? []) as ChallengeRow[]).map((row) => mapChallenge(row, completionFromChallenge(row)))
     },
@@ -95,32 +122,45 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
       const dailyCount = challenges.filter((challenge) => challenge.frequency === 'daily').length
       const displayName = profile.display_name
       return {
-        profile: { id: user.id, playerCode: profile.player_code, displayName, initials: displayName.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(), isAdmin: false },
+        profile: { id: user.id, playerCode: profile.player_code, displayName, initials: displayName.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(), isAdmin: user.app_metadata?.role === 'admin' },
         dayNumber, totalDays: 100, daysRemaining: 100 - dayNumber, points: me?.points ?? 0, rank: me?.rank ?? ranks.length,
         streak: 0, completionRate: dailyCount ? Math.round((completedDaily / dailyCount) * 100) : 0,
         nearestRival: me && me.rank > 1 ? ranks[me.rank - 2] : undefined,
       }
     },
-    async completeChallenge(challengeId) {
-      const { data, error } = await client.rpc('complete_challenge', { target_challenge_id: challengeId })
+    async completeChallenge(challengeId, periodKey = localPeriodKey()) {
+      const { data, error } = await client.rpc('complete_challenge', { target_challenge_id: challengeId, target_period_key: periodKey })
       if (error) throw new Error(error.code === '23505' ? 'This challenge is already complete for the current period.' : error.message)
       const row = (Array.isArray(data) ? data[0] : data) as CompletionRow
       return mapCompletion(row)
     },
-    async createChallenge(input: ChallengeInput) {
-      const user = await currentUser()
-      const { data, error } = await client.from('challenges').insert({ title: input.title, description: input.description, frequency: input.frequency, points: input.points, requires_approval: input.requiresApproval, starts_on: '2026-09-23', ends_on: '2026-12-31', created_by: user.id }).select().single()
+    async uncompleteChallenge(challengeId, periodKey = localPeriodKey()) {
+      const { error } = await client.rpc('uncomplete_challenge', { target_challenge_id: challengeId, target_period_key: periodKey })
       if (error) throw new Error(error.message)
-      return mapChallenge(data as ChallengeRow)
+    },    async recordChallengeProgress(challengeId, amount, periodKey) {
+      const { error } = await client.rpc('record_challenge_progress', {
+        target_challenge_id: challengeId, entry_amount: amount, target_period_key: periodKey,
+      })
+      if (error) throw new Error(error.message)
     },
-    async archiveChallenge(challengeId) {
-      const { error } = await client.from('challenges').update({ archived_at: new Date().toISOString() }).eq('id', challengeId)
+    async removeChallengeProgressEntry(challengeId, entryId, periodKey) {
+      const { error } = await client.rpc('remove_challenge_progress_entry', {
+        target_challenge_id: challengeId, target_entry_id: entryId, target_period_key: periodKey,
+      })
       if (error) throw new Error(error.message)
     },
     async getPendingCompletions(): Promise<PendingCompletion[]> {
-      const { data, error } = await client.from('completions').select('*, profiles!completions_user_id_fkey(display_name), challenges(title)').eq('status', 'pending').order('completed_at')
+      const { data, error } = await client.from('completions').select('*, challenges(title)').eq('status', 'pending').order('completed_at')
       if (error) throw new Error(error.message)
-      return (data ?? []).map((row: Record<string, any>) => ({ ...mapCompletion(row as CompletionRow), playerName: row.profiles?.display_name ?? 'Player', challengeTitle: row.challenges?.title ?? 'Challenge' }))
+      const rows = (data ?? []) as Array<CompletionRow & { challenges: { title: string } | null }>
+      const userIds = [...new Set(rows.map((row) => row.user_id))]
+      const playerNames = new Map<string, string>()
+      if (userIds.length) {
+        const { data: profiles, error: profileError } = await client.from('profiles').select('id, display_name').in('id', userIds)
+        if (profileError) throw new Error(profileError.message)
+        for (const profile of (profiles ?? []) as Array<{ id: string; display_name: string }>) playerNames.set(profile.id, profile.display_name)
+      }
+      return rows.map((row) => ({ ...mapCompletion(row), playerName: playerNames.get(row.user_id) ?? 'Player', challengeTitle: row.challenges?.title ?? 'Challenge' }))
     },
     async reviewCompletion(completionId, decision) {
       const { error } = await client.rpc('review_completion', { target_completion_id: completionId, decision })

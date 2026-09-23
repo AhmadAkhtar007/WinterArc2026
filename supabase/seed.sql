@@ -1,0 +1,1 @@
+-- Challenge rows are populated idempotently by the tracked daily challenge migration when an authenticated creator exists.

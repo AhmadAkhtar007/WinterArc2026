@@ -1,5 +1,17 @@
 export type ChallengeFrequency = 'daily' | 'weekly' | 'once'
 export type CompletionStatus = 'confirmed' | 'pending' | 'reversed'
+export type ChallengeTrackingMode = 'binary' | 'quantity' | 'occurrence'
+
+export interface RewardTier {
+  threshold: number
+  points: number
+}
+
+export interface ProgressEntry {
+  id: string
+  amount: number
+  recordedAt: string
+}
 
 export interface PlayerProfile {
   id: string
@@ -22,6 +34,19 @@ export interface Challenge {
   target?: number
   completed: boolean
   status?: CompletionStatus
+  trackingMode?: ChallengeTrackingMode
+  unitLabel?: string
+  entryOptions?: number[]
+  entryStep?: number
+  burstLimit?: number
+  minimumIntervalMinutes?: number
+  attemptDurationMinutes?: number
+  rewardTiers?: RewardTier[]
+  securedPoints?: number
+  cooldownEndsAt?: string
+  attemptEndsAt?: string
+  attemptFailed?: boolean
+  progressEntries?: ProgressEntry[]
 }
 
 export interface Completion {
@@ -53,14 +78,6 @@ export interface DashboardSnapshot {
   streak: number
   completionRate: number
   nearestRival?: LeaderboardEntry
-}
-
-export interface ChallengeInput {
-  title: string
-  description: string
-  frequency: ChallengeFrequency
-  points: number
-  requiresApproval: boolean
 }
 
 export interface PendingCompletion extends Completion {

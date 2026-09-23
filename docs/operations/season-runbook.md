@@ -12,7 +12,7 @@
 
 ## Daily operation
 
-- Publish, archive, and inspect challenges from **Command**.
+- Decide pending proof submissions from **Command** (approve or reject). Challenges are published by migration, not from the app.
 - Review high-XP proof in the WhatsApp community, then approve or reject its pending app submission.
 - Treat the app's completion and reversal history as the scoring record; do not maintain a parallel spreadsheet.
 - If a player disputes a result, identify the completion before changing anything and record a reversal reason.
@@ -21,7 +21,7 @@
 
 - Define what counts in the challenge instructions before publishing.
 - Mark exceptional or externally verifiable work as approval-required.
-- Never change the meaning or XP of an active challenge after players have completed it; archive it and publish a replacement.
+- Never change the meaning or XP of an active challenge after players have completed it; publish a corrected challenge instead. A published challenge stays on the marketplace for the season.
 - Daily habits use the honor system. The competition rules should state this plainly.
 
 ## Account recovery
@@ -30,5 +30,5 @@ The product has one in-app administrator, but project recovery remains available
 
 ## Ending the season
 
-After December 31 closes in `Asia/Karachi`, approve or reject every pending submission, export profiles and confirmed completions, and retain the final export as the immutable season result. Archive active challenges instead of deleting historical rows.
+After December 31 closes in `Asia/Karachi`, approve or reject every pending submission, export profiles and confirmed completions, and retain the final export as the immutable season result. Challenge rows are never deleted; reset the marketplace manually before the next season.
 
