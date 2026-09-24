@@ -4,8 +4,8 @@ do $$
 declare rls_count integer;
 begin
   select count(*) into rls_count from pg_class c join pg_namespace n on n.oid = c.relnamespace
-  where n.nspname = 'public' and c.relname in ('profiles', 'challenges', 'completions', 'completion_reversals', 'challenge_progress_entries') and c.relrowsecurity;
-  if rls_count <> 5 then raise exception 'Expected RLS on all five public tables'; end if;
+  where n.nspname = 'public' and c.relname in ('profiles', 'challenges', 'completions', 'challenge_progress_entries') and c.relrowsecurity;
+  if rls_count <> 4 then raise exception 'Expected RLS on all four public tables'; end if;
 end $$;
 
 do $$

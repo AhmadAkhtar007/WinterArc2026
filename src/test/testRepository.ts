@@ -171,7 +171,6 @@ export function createTestRepository({
       const completion = pendingCompletions.find((c) => c.id === completionId)
       if (completion) completion.status = decision
     },
-    async reverseCompletion() {},
     async updateDisplayName() {},
     async updatePassword() {},
     async signOut() {},

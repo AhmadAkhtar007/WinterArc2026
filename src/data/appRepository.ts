@@ -18,7 +18,6 @@ export interface AppRepository {
   removeChallengeProgressEntry(challengeId: string, entryId: string, periodKey: string): Promise<void>
   getPendingCompletions(): Promise<PendingCompletion[]>
   reviewCompletion(completionId: string, decision: 'confirmed' | 'reversed'): Promise<void>
-  reverseCompletion(completionId: string, reason: string): Promise<void>
   updateDisplayName(displayName: string): Promise<void>
   updatePassword(currentPassword: string, password: string): Promise<void>
   signOut(): Promise<void>

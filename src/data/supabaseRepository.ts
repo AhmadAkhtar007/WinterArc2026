@@ -166,10 +166,6 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
       const { error } = await client.rpc('review_completion', { target_completion_id: completionId, decision })
       if (error) throw new Error(error.message)
     },
-    async reverseCompletion(completionId, reason) {
-      const { error } = await client.rpc('reverse_completion', { target_completion_id: completionId, reversal_reason: reason })
-      if (error) throw new Error(error.message)
-    },
     async updateDisplayName(displayName) {
       const user = await currentUser()
       const cleanName = displayName.trim()
