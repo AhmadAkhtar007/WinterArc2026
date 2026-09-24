@@ -1,4 +1,4 @@
-const CACHE = 'winter-arc-shell-v2'
+const CACHE = 'winter-arc-shell-v3'
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png']
 
 self.addEventListener('install', (event) => {
