@@ -8,6 +8,9 @@ import { ChallengesPage } from '../pages/ChallengesPage'
 import { LeaderboardPage } from '../pages/LeaderboardPage'
 import { ProfilePage } from '../pages/ProfilePage'
 import { AdminPage } from '../admin/AdminPage'
+import { usePwaInstall } from '../pwa/usePwaInstall'
+import { PwaInstallBanner } from '../pwa/PwaInstallBanner'
+import { PwaInstallModal } from '../pwa/PwaInstallModal'
 import type { AppRoute } from './navigation'
 
 function localPeriodKey(date = new Date()): string {
@@ -39,6 +42,7 @@ export function AppShell({ repository }: { repository: AppRepository }) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [busyChallenge, setBusyChallenge] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const pwa = usePwaInstall()
 
   const refresh = useCallback(async () => {
     const version = ++refreshVersion.current
@@ -161,10 +165,26 @@ export function AppShell({ repository }: { repository: AppRepository }) {
       <main className="page-stage" key={route}>
         {route === 'challenges' && <ChallengesPage challenges={challenges} catalog={catalog} committedIds={new Set(challenges.map((challenge) => challenge.id))} commitMode={commitMode} selection={selection} busyChallenge={busyChallenge} busyCommit={busyCommit} onToggle={toggleChallenge} onRecord={recordChallengeProgress} onRefresh={() => { void refresh() }} onToggleCommitMode={toggleCommitMode} onToggleSelection={toggleSelection} onConfirmCommit={() => { void commitSelection() }} />}
         {route === 'leaderboard' && <LeaderboardPage entries={leaderboard} />}
-        {route === 'profile' && <ProfilePage dashboard={dashboard} onSignOut={() => repository.signOut()} onUpdateDisplayName={async (displayName) => { await repository.updateDisplayName(displayName); await refresh() }} onUpdatePassword={(currentPassword, password) => repository.updatePassword(currentPassword, password)} />}
+        {route === 'profile' && (
+          <ProfilePage
+            dashboard={dashboard}
+            onSignOut={() => repository.signOut()}
+            onUpdateDisplayName={async (displayName) => {
+              await repository.updateDisplayName(displayName)
+              await refresh()
+            }}
+            onUpdatePassword={(currentPassword, password) => repository.updatePassword(currentPassword, password)}
+            onInstallApp={pwa.triggerInstall}
+            isStandalone={pwa.standalone}
+          />
+        )}
         {route === 'admin' && dashboard.profile.isAdmin && <AdminPage repository={repository} />}
       </main>
+      {pwa.canShowBanner && (
+        <PwaInstallBanner onInstall={pwa.triggerInstall} onDismiss={pwa.dismissBanner} />
+      )}
       <BottomNavigation activeRoute={route} onNavigate={(nextRoute) => { setRoute(nextRoute); void refresh() }} />
+      <PwaInstallModal isOpen={pwa.showIosModal} isIos={pwa.isIos} onClose={() => pwa.setShowIosModal(false)} />
     </div>
   )
 }

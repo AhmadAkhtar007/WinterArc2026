@@ -7,6 +7,8 @@ interface ProfilePageProps {
   onSignOut: () => Promise<void>
   onUpdateDisplayName: (displayName: string) => Promise<void>
   onUpdatePassword: (currentPassword: string, password: string) => Promise<void>
+  onInstallApp?: () => void
+  isStandalone?: boolean
 }
 
 const lifeDimensions = [
@@ -16,7 +18,7 @@ const lifeDimensions = [
   { name: 'Craft', score: 81, tone: 'craft' },
 ] as const
 
-export function ProfilePage({ dashboard, onSignOut, onUpdateDisplayName, onUpdatePassword }: ProfilePageProps) {
+export function ProfilePage({ dashboard, onSignOut, onUpdateDisplayName, onUpdatePassword, onInstallApp, isStandalone }: ProfilePageProps) {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -75,6 +77,21 @@ export function ProfilePage({ dashboard, onSignOut, onUpdateDisplayName, onUpdat
       <div className="account-settings__grid">
         <form onSubmit={updateDisplayName}><h3>Public name</h3><label>Display name<input name="displayName" defaultValue={dashboard.profile.displayName} minLength={2} maxLength={40} required /></label><button className="secondary-button" type="submit">Save display name</button></form>
         <form onSubmit={updatePassword}><h3>Password</h3><label>Current password<input name="currentPassword" type="password" autoComplete="current-password" minLength={8} required /></label><label>New password<input name="password" type="password" autoComplete="new-password" minLength={8} required /></label><label>Confirm new password<input name="confirmPassword" type="password" autoComplete="new-password" minLength={8} required /></label><button className="secondary-button" type="submit">Change password</button></form>
+      </div>
+    </section>
+    <section className="pwa-profile-card">
+      <div className="section-heading"><h2>Application</h2></div>
+      <div className="pwa-profile-card__content">
+        <p>
+          {isStandalone
+            ? 'Winter Arc is running as an installed standalone app.'
+            : 'Add Winter Arc to your home screen for full-screen focus, instant launch, and offline tracking.'}
+        </p>
+        {!isStandalone && onInstallApp && (
+          <button className="secondary-button" type="button" onClick={onInstallApp}>
+            Install to home screen
+          </button>
+        )}
       </div>
     </section>
     <button className="secondary-button" type="button" onClick={() => void onSignOut()}>Sign out</button>

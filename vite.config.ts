@@ -10,6 +10,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    pool: 'threads',
     setupFiles: './src/test/setup.ts',
     restoreMocks: true,
     testTimeout: 20000,

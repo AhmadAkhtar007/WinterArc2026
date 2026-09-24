@@ -314,6 +314,31 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
   .primary-button { min-height: 52px; }
   .auth-footer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 }
+.pwa-banner { position: fixed; left: 50%; bottom: calc(68px + var(--safe-bottom)); z-index: 24; transform: translateX(-50%); width: min(calc(100% - 24px), 520px); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border: 1px solid rgba(168,216,232,.18); border-radius: 16px; background: rgba(12,15,18,.96); backdrop-filter: blur(12px); box-shadow: 0 12px 32px rgba(0,0,0,.6); animation: page-in .35s var(--ease-heavy); }
+.pwa-banner__info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pwa-banner__icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: rgba(168,216,232,.1); color: var(--ice-bright); flex-shrink: 0; }
+.pwa-banner__text { display: grid; gap: 2px; min-width: 0; }
+.pwa-banner__text strong { font-size: 12px; font-weight: 600; color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pwa-banner__text span { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pwa-banner__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.pwa-banner__install-btn { min-height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--bone); color: var(--black); font-size: 11px; font-weight: 700; letter-spacing: .02em; cursor: pointer; transition: transform .15s ease; }
+.pwa-banner__install-btn:active { transform: scale(.95); }
+.pwa-banner__close-btn { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--silver); cursor: pointer; }
+.pwa-profile-card { display: grid; gap: 16px; width: min(100%, 760px); margin-inline: auto; padding: 16px; border: 1px solid rgba(255,255,255,.07); border-radius: 18px; background: #0b0e10; }
+.pwa-profile-card__content { display: grid; gap: 14px; }
+.pwa-profile-card__content p { margin: 0; color: var(--silver); font-size: 13px; line-height: 19px; }
+.pwa-modal { position: relative; width: min(100%, 420px); border: 1px solid rgba(255,255,255,.1); border-radius: 24px; padding: 24px; background: #0a0d0f; box-shadow: 0 24px 60px rgba(0,0,0,.7); }
+.pwa-modal__header { display: flex; align-items: center; justify-content: space-between; }
+.pwa-modal__header h2 { margin: 0; font: 400 24px/1 var(--display); color: var(--bone); }
+.pwa-modal__close { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; background: transparent; color: var(--silver); cursor: pointer; }
+.pwa-modal__desc { margin: 12px 0 20px; color: var(--silver); font-size: 13px; line-height: 18px; }
+.pwa-modal__steps { list-style: none; padding: 0; margin: 0 0 24px; display: grid; gap: 12px; }
+.pwa-modal__steps li { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 14px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05); }
+.pwa-step-icon, .pwa-step-num { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: rgba(168,216,232,.1); color: var(--ice-bright); flex-shrink: 0; font-size: 13px; font-weight: 700; }
+.pwa-modal__steps li div { display: grid; gap: 2px; }
+.pwa-modal__steps strong { color: var(--bone); font-size: 13px; }
+.pwa-modal__steps span { color: var(--muted); font-size: 11px; line-height: 15px; }
+.pwa-modal__done { width: 100%; min-height: 44px; }
 @media (min-width: 1040px) {
   .challenge-grid { grid-template-columns: repeat(3,1fr); } .challenge-card--feature { grid-column: span 2; }
 }
