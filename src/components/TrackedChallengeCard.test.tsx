@@ -38,4 +38,51 @@ describe('TrackedChallengeCard', () => {
     fireEvent.click(screen.getByRole('heading', { name: challenge.title }))
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
   })
+
+  it('displays gym weekly split sessions and configured XP', () => {
+    const gymChallenge: Challenge = {
+      id: 'gym',
+      title: 'Gym',
+      description: 'Weekly gym split',
+      frequency: 'weekly',
+      points: 100,
+      requiresApproval: false,
+      category: 'body',
+      completed: false,
+      trackingMode: 'occurrence',
+      scoringProfile: 'gym',
+      unitLabel: 'sessions',
+      target: 5,
+      progress: 3,
+    }
+
+    render(<TrackedChallengeCard challenge={gymChallenge} onRecord={vi.fn()} onCooldownEnd={vi.fn()} />)
+
+    expect(screen.getByText('3 / 5 sessions')).toBeInTheDocument()
+    expect(screen.getByText('+100 XP')).toBeInTheDocument()
+  })
+
+  it('displays pushups bonus reps and dynamic XP beyond the baseline up to the 2x cap', () => {
+    const pushupChallenge: Challenge = {
+      id: 'pushups',
+      title: 'Pushups',
+      description: 'Daily pushups',
+      frequency: 'daily',
+      points: 10,
+      requiresApproval: false,
+      category: 'body',
+      completed: false,
+      trackingMode: 'quantity',
+      scoringProfile: 'pushups',
+      unitLabel: 'reps',
+      target: 100,
+      progress: 120,
+    }
+
+    render(<TrackedChallengeCard challenge={pushupChallenge} onRecord={vi.fn()} onCooldownEnd={vi.fn()} onUpgradeTarget={vi.fn()} />)
+
+    expect(screen.getByText('120 / 100 reps (+20 bonus)')).toBeInTheDocument()
+    expect(screen.getByText('+12 XP')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Raise baseline/i })).toBeInTheDocument()
+  })
 })

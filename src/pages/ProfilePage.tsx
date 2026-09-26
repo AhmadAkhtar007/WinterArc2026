@@ -69,7 +69,14 @@ export function ProfilePage({ dashboard, onSignOut, onUpdateDisplayName, onUpdat
         </article>)}
       </div>
     </section>
-    <section className="consistency-card"><div className="section-heading"><h2>100-day record</h2><span>{dashboard.completionRate}%</span></div><div className="heatmap" aria-label={`${dashboard.completionRate}% season completion`}>{Array.from({ length: 100 }, (_, day) => <span key={day} className={day < dashboard.dayNumber && day % 7 !== 5 ? 'is-complete' : day === dashboard.dayNumber ? 'is-today' : ''} />)}</div></section>
+    <section className="consistency-card"><div className="section-heading"><h2>100-day record</h2><span>{dashboard.completionRate}%</span></div><div className="heatmap" aria-label={`${dashboard.completionRate}% season completion`}>{Array.from({ length: 100 }, (_, day) => {
+      const isComplete = dashboard.completedDays
+        ? dashboard.completedDays.includes(day)
+        : day < dashboard.dayNumber && day % 7 !== 5
+      const isToday = day === dashboard.dayNumber - 1
+      const className = [isComplete ? 'is-complete' : '', isToday ? 'is-today' : ''].filter(Boolean).join(' ')
+      return <span key={day} className={className || undefined} />
+    })}</div></section>
     <section className="account-settings">
       <div className="section-heading"><h2>Your identity</h2></div>
       {error && <div className="form-error" role="alert">{error}</div>}

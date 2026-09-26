@@ -1,6 +1,8 @@
 export type ChallengeFrequency = 'daily' | 'weekly' | 'once'
 export type CompletionStatus = 'confirmed' | 'pending' | 'reversed'
 export type ChallengeTrackingMode = 'binary' | 'quantity' | 'occurrence'
+export type ScoringProfile = 'gym' | 'pushups' | 'pullups' | 'water' | 'standard'
+export type ChallengeIdeaStatus = 'pending' | 'approved' | 'rejected'
 
 export interface RewardTier {
   threshold: number
@@ -19,10 +21,12 @@ export interface PlayerProfile {
   displayName: string
   initials: string
   isAdmin: boolean
+  createdAt?: string
 }
 
 export interface Challenge {
   id: string
+  catalogId?: string
   title: string
   description: string
   frequency: ChallengeFrequency
@@ -35,6 +39,7 @@ export interface Challenge {
   completed: boolean
   status?: CompletionStatus
   trackingMode?: ChallengeTrackingMode
+  scoringProfile?: ScoringProfile
   unitLabel?: string
   entryOptions?: number[]
   entryStep?: number
@@ -47,6 +52,8 @@ export interface Challenge {
   attemptEndsAt?: string
   attemptFailed?: boolean
   progressEntries?: ProgressEntry[]
+  customTarget?: number
+  pointsLabel?: string
 }
 
 export interface Completion {
@@ -78,9 +85,27 @@ export interface DashboardSnapshot {
   streak: number
   completionRate: number
   nearestRival?: LeaderboardEntry
+  completedDays?: number[]
 }
 
 export interface PendingCompletion extends Completion {
   playerName: string
   challengeTitle: string
+}
+
+export interface ChallengeIdea {
+  id: string
+  title: string
+  description: string
+  status: ChallengeIdeaStatus
+  submittedBy: string
+  submittedAt: string
+  playerName: string
+}
+
+export interface ChallengeIdeaReview {
+  decision: 'approved' | 'rejected'
+  frequency?: ChallengeFrequency
+  points?: number
+  requiresApproval?: boolean
 }

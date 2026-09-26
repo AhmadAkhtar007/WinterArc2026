@@ -11,7 +11,7 @@ describe('AuthPage', () => {
   it('replays onboarding until the player authenticates', () => {
     localStorage.removeItem(INTRO_STORAGE_KEY)
     const { unmount } = render(<AuthPage onCreateIdentity={vi.fn()} onSignIn={vi.fn()} />)
-    expect(screen.getByRole('heading', { name: /73% of 2026 is already gone/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /is already gone/i })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /continue/i }))
     fireEvent.click(screen.getByRole('button', { name: /continue/i }))
     fireEvent.click(screen.getByRole('button', { name: /continue/i }))
@@ -19,7 +19,7 @@ describe('AuthPage', () => {
     expect(localStorage.getItem(INTRO_STORAGE_KEY)).toBeNull()
     unmount()
     render(<AuthPage onCreateIdentity={vi.fn()} onSignIn={vi.fn()} />)
-    expect(screen.getByRole('heading', { name: /73% of 2026 is already gone/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /is already gone/i })).toBeInTheDocument()
   })
 
   it('keeps a server-assigned identity visible until the player enters', () => {

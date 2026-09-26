@@ -18,7 +18,7 @@ export function ChallengeCard({ challenge, busy = false, onToggle, feature = fal
         <span aria-hidden="true">{marked && <Check size={12} strokeWidth={2.5} />}</span>
       </button>
       <h3 className={!selection && marked ? 'challenge-card__title--complete' : ''}>{challenge.title}</h3>
-      <span className="points">+{challenge.points} XP</span>
+      <span className="points">{challenge.pointsLabel ?? `+${challenge.points} XP`}</span>
       {!selection && <span className="sr-only" aria-live="polite">{busy ? 'Updating completion' : isPending ? 'Awaiting review' : marked ? 'Completed' : ''}</span>}
     </article>
   )

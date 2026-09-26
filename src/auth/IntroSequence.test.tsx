@@ -3,8 +3,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { IntroSequence } from './IntroSequence'
 
 describe('IntroSequence', () => {
-  it('reframes the 365 days of 2026 across the first two slides', () => {
-    render(<IntroSequence onComplete={vi.fn()} />)
+  it('reframes the 365 days of 2026 across the first two slides dynamically', () => {
+    const fixedDate = new Date('2026-09-23T12:00:00')
+    render(<IntroSequence onComplete={vi.fn()} now={fixedDate} />)
     expect(screen.getByRole('heading', { name: /73% of 2026 is already gone/i })).toBeInTheDocument()
     expect(screen.getAllByTestId('year-dot')).toHaveLength(365)
     expect(screen.getAllByTestId('elapsed-dot')).toHaveLength(265)
@@ -13,6 +14,16 @@ describe('IntroSequence', () => {
     expect(screen.getByRole('heading', { name: /but 27% remains/i })).toBeInTheDocument()
     expect(screen.getAllByTestId('inactive-dot')).toHaveLength(265)
     expect(screen.getAllByTestId('remaining-dot')).toHaveLength(100)
+  })
+
+  it('adjusts dots and percentages for a different date', () => {
+    const fixedDate = new Date('2026-07-02T12:00:00')
+    render(<IntroSequence onComplete={vi.fn()} now={fixedDate} />)
+    expect(screen.getByRole('heading', { name: /50% of 2026 is already gone/i })).toBeInTheDocument()
+    expect(screen.getAllByTestId('elapsed-dot')).toHaveLength(182)
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }))
+    expect(screen.getByRole('heading', { name: /but 50% remains/i })).toBeInTheDocument()
+    expect(screen.getAllByTestId('remaining-dot')).toHaveLength(183)
   })
 
   it('finishes with the 100-day compounding model', () => {

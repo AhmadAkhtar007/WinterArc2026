@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import type { AppRepository } from '../data/appRepository'
 import type { Challenge, DashboardSnapshot, LeaderboardEntry } from '../domain/types'
+import { localDayKey, periodKeyFor } from '../domain/challengeRules'
 import { BrandMark } from '../components/BrandMark'
 import { BottomNavigation } from '../components/BottomNavigation'
 import { ChallengesPage } from '../pages/ChallengesPage'
@@ -12,23 +13,6 @@ import { usePwaInstall } from '../pwa/usePwaInstall'
 import { PwaInstallBanner } from '../pwa/PwaInstallBanner'
 import { PwaInstallModal } from '../pwa/PwaInstallModal'
 import type { AppRoute } from './navigation'
-
-function localPeriodKey(date = new Date()): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function periodKeyForChallenge(challenge: Challenge): string {
-  if (challenge.frequency !== 'weekly') return localPeriodKey()
-  const date = new Date()
-  const day = date.getDay() || 7
-  date.setDate(date.getDate() + 4 - day)
-  const yearStart = new Date(date.getFullYear(), 0, 1)
-  const week = Math.ceil((((date.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7)
-  return `${date.getFullYear()}-W${String(week).padStart(2, '0')}`
-}
 
 export function AppShell({ repository }: { repository: AppRepository }) {
   const [route, setRoute] = useState<AppRoute>('challenges')
@@ -75,13 +59,14 @@ export function AppShell({ repository }: { repository: AppRepository }) {
     })
   }
 
-  async function commitSelection() {
+  async function commitSelection(customTargets?: Record<string, number>, directId?: string) {
     setBusyCommit(true)
     setError(null)
+    const targets = directId ? [directId] : Array.from(selection)
     const failed: string[] = []
-    for (const challengeId of selection) {
+    for (const challengeId of targets) {
       try {
-        await repository.enrollChallenge(challengeId)
+        await repository.enrollChallenge(challengeId, customTargets?.[challengeId])
       } catch (commitError) {
         failed.push(challengeId)
         setError(commitError instanceof Error ? commitError.message : 'Challenge could not be committed.')
@@ -91,6 +76,17 @@ export function AppShell({ repository }: { repository: AppRepository }) {
     setSelection(new Set(failed))
     setBusyCommit(false)
     if (!failed.length) setCommitMode(false)
+  }
+
+  async function handleUpgradeTarget(challengeId: string, newTarget: number) {
+    setError(null)
+    try {
+      await repository.upgradeChallengeTarget(challengeId, newTarget)
+      await refresh()
+    } catch (upgradeError) {
+      setError(upgradeError instanceof Error ? upgradeError.message : 'Baseline could not be raised.')
+      throw upgradeError
+    }
   }
 
   useEffect(() => { void refresh() }, [refresh])
@@ -119,8 +115,8 @@ export function AppShell({ repository }: { repository: AppRepository }) {
     setBusyChallenge(challengeId)
     setError(null)
     try {
-      if (completed) await repository.completeChallenge(challengeId, localPeriodKey())
-      else await repository.uncompleteChallenge(challengeId, localPeriodKey())
+      if (completed) await repository.completeChallenge(challengeId, localDayKey())
+      else await repository.uncompleteChallenge(challengeId, localDayKey())
       void refresh()
     } catch (completionError) {
       setChallenges(previousChallenges)
@@ -139,7 +135,7 @@ export function AppShell({ repository }: { repository: AppRepository }) {
     setBusyChallenge(challengeId)
     setError(null)
     try {
-      await repository.recordChallengeProgress(challengeId, amount, periodKeyForChallenge(challenge))
+      await repository.recordChallengeProgress(challengeId, amount, periodKeyFor(challenge))
       void refresh()
     } catch (progressError) {
       setChallenges(previousChallenges)
@@ -154,6 +150,10 @@ export function AppShell({ repository }: { repository: AppRepository }) {
     return <main className="loading-screen" aria-live="polite"><BrandMark /><p>Entering the arc</p><span className="loading-line" /></main>
   }
 
+  const committedIds = new Set(challenges
+    .filter((challenge) => challenge.frequency !== 'once' || challenge.status !== 'confirmed')
+    .map((challenge) => challenge.catalogId ?? challenge.id))
+
   return (
     <div className="app-frame">
       <div className="grain" aria-hidden="true" />
@@ -163,7 +163,7 @@ export function AppShell({ repository }: { repository: AppRepository }) {
       </header>
       {error && <button className="error-banner" type="button" onClick={() => setError(null)}>{error}<X aria-hidden="true" size={18} /></button>}
       <main className="page-stage" key={route}>
-        {route === 'challenges' && <ChallengesPage challenges={challenges} catalog={catalog} committedIds={new Set(challenges.map((challenge) => challenge.id))} commitMode={commitMode} selection={selection} busyChallenge={busyChallenge} busyCommit={busyCommit} onToggle={toggleChallenge} onRecord={recordChallengeProgress} onRefresh={() => { void refresh() }} onToggleCommitMode={toggleCommitMode} onToggleSelection={toggleSelection} onConfirmCommit={() => { void commitSelection() }} />}
+        {route === 'challenges' && <ChallengesPage challenges={challenges} catalog={catalog} committedIds={committedIds} commitMode={commitMode} selection={selection} busyChallenge={busyChallenge} busyCommit={busyCommit} onToggle={toggleChallenge} onRecord={recordChallengeProgress} onRefresh={() => { void refresh() }} onToggleCommitMode={toggleCommitMode} onToggleSelection={toggleSelection} onConfirmCommit={(customTargets, directId) => { void commitSelection(customTargets, directId) }} onUpgradeTarget={handleUpgradeTarget} onSubmitIdea={(title, description) => repository.submitChallengeIdea(title, description)} />}
         {route === 'leaderboard' && <LeaderboardPage entries={leaderboard} />}
         {route === 'profile' && (
           <ProfilePage

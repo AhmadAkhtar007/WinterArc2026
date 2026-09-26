@@ -63,6 +63,8 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .page-stage { max-width: 1080px; margin: 0 auto; animation: page-in .75s var(--ease-heavy) both; }
 .page { display: grid; gap: 28px; }
 .add-challenge-button { justify-self: center; min-height: 40px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(168,216,232,.2); border-radius: 999px; padding: 0 16px; background: rgba(168,216,232,.05); color: var(--ice); font-size: 11px; cursor: pointer; }
+.challenge-actions { justify-self: center; display: flex; align-items: center; gap: 14px; }
+.challenge-actions .text-button { min-height: 44px; }
 .commit-block { justify-self: center; display: grid; gap: 10px; justify-items: center; text-align: center; }
 .commit-actions { display: flex; align-items: center; gap: 10px; }
 .commit-actions .secondary-button { min-height: 44px; padding: 0 22px; }
@@ -139,10 +141,13 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .tracked-card__meter i { display: block; height: 100%; border-radius: inherit; background: var(--ice); transition: width .35s var(--ease-heavy); }
 .tracked-card.is-complete .tracked-card__action { border-color: var(--ice); background: var(--ice); color: var(--black); box-shadow: 0 3px 10px rgba(168,216,232,.12); }
 .tracked-card.is-locked { cursor: default; }
-.season-proof-card { min-height: 76px; grid-template-rows: auto auto; row-gap: 3px; }
+.tracked-card__upgrade { margin-left: 8px; border: 1px solid rgba(168,216,232,.2); border-radius: 4px; background: rgba(168,216,232,.08); color: var(--ice); font: 500 10px/1.2 var(--body); padding: 2px 6px; cursor: pointer; vertical-align: middle; transition: all .2s ease; }
+.tracked-card__upgrade:hover { background: rgba(168,216,232,.18); border-color: var(--ice); color: var(--ice-bright); }
+.season-proof-card { min-height: 76px; grid-template-rows: auto auto; row-gap: 4px; }
 .season-proof-card .season-proof-card__action { grid-column: 1; grid-row: 1 / 3; align-self: center; }
-.season-proof-card h3 { grid-column: 2; grid-row: 1; align-self: end; }
-.season-proof-card > .points { grid-column: 3; grid-row: 1; align-self: end; }
+.season-proof-card h3 { grid-column: 2; grid-row: 1; align-self: center; white-space: normal; line-height: 17px; }
+.season-proof-card > .points { grid-column: 3; grid-row: 1; align-self: start; padding-top: 2px; }
+.season-proof-card__title--approved { color: var(--bone) !important; text-decoration: none !important; }
 .season-proof-card__instruction { grid-column: 2 / 4; grid-row: 2; color: var(--ice); font-size: 10px; line-height: 14px; }
 .challenge-card.is-pending { border-color: rgba(239,123,69,.16); }
 .challenge-card.is-pending .complete-button { border-color: rgba(239,123,69,.4); color: var(--ember); }
@@ -161,8 +166,20 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .modal__list strong { overflow: hidden; color: #dedbd5; font: 400 13px/17px var(--body); text-overflow: ellipsis; white-space: nowrap; }
 .modal__list small { color: var(--muted); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 .modal__list li > span { color: var(--ice); font: 700 10px/14px var(--body); white-space: nowrap; }
+.gym-picker { display: grid; gap: 8px; margin-top: 8px; padding: 10px 12px; border: 1px solid rgba(168,216,232,.18); border-radius: 14px; background: rgba(168,216,232,.04); }
+.gym-picker__title { color: var(--silver); font-size: 11px; font-weight: 500; }
+.gym-picker__pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.gym-picker__pill { min-width: 36px; height: 30px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; background: #181b1d; color: var(--muted); font: 600 11px/1 var(--body); cursor: pointer; transition: all .2s ease; }
+.gym-picker__pill.is-active { border-color: var(--ice); background: var(--ice); color: #081014; }
+.gym-picker__summary { display: flex; justify-content: space-between; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; line-height: 14px; }
+.gym-picker__summary strong { color: var(--ice-bright); font-weight: 700; }
 .modal__stakes { margin: 0; color: var(--silver); font-size: 11px; line-height: 16px; }
 .modal__actions { display: grid; gap: 8px; }
+.idea-form > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 17px; }
+.idea-form label { display: grid; gap: 7px; color: var(--silver); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.idea-form input, .idea-form textarea, .idea-review select, .idea-review input[type="number"] { width: 100%; min-height: 44px; border: 1px solid rgba(255,255,255,.09); border-radius: 10px; padding: 10px 12px; background: #111518; color: var(--bone); font: 400 13px var(--body); outline: none; }
+.idea-form textarea { min-height: 110px; resize: vertical; }
+.idea-form input:focus, .idea-form textarea:focus, .idea-review select:focus, .idea-review input:focus { border-color: var(--ice); }
 .section-kicker { color: var(--ice); font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; }
 .page-header { padding: 32px 4px 8px; text-align: center; }
 .page-header h1 { margin: 0; font-size: clamp(44px, 13vw, 58px); }
@@ -232,6 +249,14 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .review-queue article strong { font: 400 17px var(--display); }
 .review-queue article span { color: var(--muted); font-size: 9px; }
 .review-queue article > div:last-child { display: flex; gap: 6px; }
+.review-queue .idea-review { align-items: start; }
+.review-queue .idea-review > div:first-child { max-width: 460px; }
+.review-queue .idea-review p { margin: 0; color: var(--silver); font-size: 11px; line-height: 16px; }
+.review-queue .idea-review__controls { width: min(100%, 320px); display: grid; grid-template-columns: 1fr 90px; gap: 8px; }
+.idea-review__controls label { display: grid; gap: 4px; color: var(--muted); font-size: 9px; }
+.idea-review__proof { grid-column: 1 / 3; display: flex !important; grid-auto-flow: column; justify-content: start; align-items: center; }
+.idea-review__proof input { width: 16px; height: 16px; }
+.idea-review__actions { grid-column: 1 / 3; justify-content: end; }
 .review-queue button { min-height: 40px; border: 1px solid rgba(255,255,255,.09); border-radius: 999px; padding: 0 13px; background: transparent; color: var(--silver); font-size: 9px; cursor: pointer; }
 .review-queue button.approve { border-color: transparent; background: var(--bone); color: var(--black); }
 .empty-state { min-height: 180px; display: grid; place-content: center; justify-items: center; gap: 10px; color: var(--muted); }

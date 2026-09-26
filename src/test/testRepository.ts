@@ -1,5 +1,6 @@
 import type { AppRepository } from '../data/appRepository'
-import type { Challenge, Completion, DashboardSnapshot, LeaderboardEntry, PendingCompletion } from '../domain/types'
+import type { Challenge, ChallengeIdea, Completion, DashboardSnapshot, LeaderboardEntry, PendingCompletion } from '../domain/types'
+import { scoringBreakdown, scoringProfileFor } from '../domain/challengeRules'
 
 const defaultCatalog: Challenge[] = [
   {
@@ -57,6 +58,41 @@ const defaultCatalog: Challenge[] = [
     completed: false,
     trackingMode: 'binary',
   },
+  {
+    id: 'gym',
+    title: 'Gym',
+    description: 'Commit to your weekly training split. 10 XP per session plus 50 XP completion bonus when you hit your weekly goal.',
+    frequency: 'weekly',
+    points: 90,
+    requiresApproval: false,
+    category: 'body',
+    completed: false,
+    trackingMode: 'occurrence',
+    scoringProfile: 'gym',
+    unitLabel: 'sessions',
+    target: 4,
+    entryOptions: [1],
+    minimumIntervalMinutes: 720,
+    burstLimit: 1,
+    progress: 0,
+    securedPoints: 0,
+  },
+  {
+    id: 'pushups',
+    title: 'Pushups',
+    description: 'Daily pushups. Earn +1 XP per 10 reps, with a bonus cap of double your baseline.',
+    frequency: 'daily',
+    points: 10,
+    requiresApproval: false,
+    category: 'body',
+    completed: false,
+    trackingMode: 'quantity',
+    scoringProfile: 'pushups',
+    unitLabel: 'reps',
+    target: 100,
+    progress: 0,
+    securedPoints: 0,
+  },
 ]
 
 const dashboard = (admin: boolean): DashboardSnapshot => ({
@@ -68,6 +104,7 @@ const dashboard = (admin: boolean): DashboardSnapshot => ({
   rank: 2,
   streak: 0,
   completionRate: 0,
+  completedDays: [],
 })
 
 const defaultLeaderboard: LeaderboardEntry[] = [
@@ -78,12 +115,14 @@ const defaultLeaderboard: LeaderboardEntry[] = [
 interface TestRepositoryOptions {
   admin?: boolean
   pending?: boolean
+  pendingIdea?: boolean
   initialChallenges?: Challenge[]
 }
 
 export function createTestRepository({
   admin = false,
   pending = false,
+  pendingIdea = false,
   initialChallenges,
 }: TestRepositoryOptions = {}): AppRepository {
   const catalog = defaultCatalog.map((c) => ({ ...c }))
@@ -92,6 +131,7 @@ export function createTestRepository({
     : pending
       ? [{ ...catalog[2], completed: true, status: 'pending' as const }]
       : []
+  let runSequence = 0
 
   const pendingCompletions: PendingCompletion[] = pending
     ? [{
@@ -106,6 +146,18 @@ export function createTestRepository({
       }]
     : []
 
+  const pendingIdeas: ChallengeIdea[] = pendingIdea
+    ? [{
+        id: 'idea-read-before-bed',
+        title: 'Read before bed',
+        description: 'Build a consistent reading habit.',
+        status: 'pending',
+        submittedBy: 'test-player',
+        submittedAt: new Date('2026-09-25T12:00:00Z').toISOString(),
+        playerName: 'Legend',
+      }]
+    : []
+
   return {
     async getDashboard() {
       return dashboard(admin)
@@ -116,17 +168,70 @@ export function createTestRepository({
     async getChallengeCatalog() {
       return catalog
     },
-    async enrollChallenge(challengeId) {
-      const match = catalog.find((c) => c.id === challengeId)
-      if (match && !challenges.some((c) => c.id === challengeId)) {
-        challenges = [...challenges, { ...match }]
+    async submitChallengeIdea(title, description) {
+      pendingIdeas.push({
+        id: `idea-${pendingIdeas.length + 1}`,
+        title: title.trim(),
+        description: description.trim(),
+        status: 'pending',
+        submittedBy: 'test-player',
+        submittedAt: new Date().toISOString(),
+        playerName: 'Legend',
+      })
+    },
+    async getPendingChallengeIdeas() {
+      return pendingIdeas.filter((idea) => idea.status === 'pending')
+    },
+    async reviewChallengeIdea(ideaId, review) {
+      const idea = pendingIdeas.find((candidate) => candidate.id === ideaId && candidate.status === 'pending')
+      if (!idea) throw new Error('Pending idea not found.')
+      idea.status = review.decision
+      if (review.decision === 'approved') {
+        if (!review.frequency || !review.points) throw new Error('Frequency and XP are required.')
+        catalog.push({
+          id: `published-${idea.id}`,
+          title: idea.title,
+          description: idea.description,
+          frequency: review.frequency,
+          points: review.points,
+          requiresApproval: review.requiresApproval ?? false,
+          category: review.frequency === 'once' ? 'craft' : 'discipline',
+          completed: false,
+          trackingMode: 'binary',
+        })
       }
+    },
+    async enrollChallenge(challengeId, customTarget) {
+      const match = catalog.find((c) => c.id === challengeId)
+      const alreadyActive = challenges.some((challenge) =>
+        (challenge.catalogId ?? challenge.id) === challengeId
+        && (match?.frequency !== 'once' || challenge.status !== 'confirmed'))
+      if (match && !alreadyActive) {
+        const profile = scoringProfileFor(match)
+        const target = customTarget ?? match.target ?? 1
+        const points = profile === 'standard' ? match.points : scoringBreakdown(profile, target, match.points).total
+        const runIdentity = match.frequency === 'once'
+          ? { id: `${match.id}-run-${++runSequence}`, catalogId: match.id }
+          : { id: match.id }
+        challenges = [...challenges, { ...match, ...runIdentity, target, points, customTarget }]
+      }
+    },
+    async upgradeChallengeTarget(challengeId, newTarget) {
+      challenges = challenges.map((c) => {
+        if (c.id === challengeId) {
+          const profile = scoringProfileFor(c)
+          const points = profile === 'standard' ? c.points : scoringBreakdown(profile, newTarget, c.points).total
+          return { ...c, target: newTarget, points, customTarget: newTarget }
+        }
+        return c
+      })
     },
     async getLeaderboard() {
       return defaultLeaderboard
     },
     async completeChallenge(challengeId, periodKey = '2026-season'): Promise<Completion> {
       const target = challenges.find((c) => c.id === challengeId)
+        ?? challenges.find((c) => c.catalogId === challengeId && c.status === undefined)
       const points = target?.points ?? 0
       const status = target?.requiresApproval ? ('pending' as const) : ('confirmed' as const)
       if (target) {
@@ -134,8 +239,8 @@ export function createTestRepository({
         target.status = status
       }
       const completion: Completion = {
-        id: `completion-${challengeId}`,
-        challengeId,
+        id: `completion-${target?.id ?? challengeId}`,
+        challengeId: target?.id ?? challengeId,
         periodKey,
         pointsAwarded: status === 'confirmed' ? points : 0,
         status,
@@ -143,8 +248,8 @@ export function createTestRepository({
       }
       if (target?.requiresApproval) {
         pendingCompletions.push({
-          id: `pending-${challengeId}`,
-          challengeId,
+          id: `pending-${target.id}`,
+          challengeId: target.id,
           periodKey,
           pointsAwarded: points,
           status: 'pending',
@@ -157,19 +262,37 @@ export function createTestRepository({
     },
     async uncompleteChallenge(challengeId) {
       const target = challenges.find((c) => c.id === challengeId)
+        ?? challenges.find((c) => c.catalogId === challengeId && c.status !== 'confirmed')
       if (target) {
         target.completed = false
         target.status = undefined
       }
     },
-    async recordChallengeProgress() {},
+    async recordChallengeProgress(challengeId, amount) {
+      challenges = challenges.map((c) => {
+        if (c.id === challengeId) {
+          const nextProgress = (c.progress ?? 0) + amount
+          const target = c.target ?? 1
+          const completed = nextProgress >= target
+          return { ...c, progress: nextProgress, completed }
+        }
+        return c
+      })
+    },
     async removeChallengeProgressEntry() {},
     async getPendingCompletions() {
-      return pendingCompletions
+      return pendingCompletions.filter((completion) => completion.status === 'pending')
     },
     async reviewCompletion(completionId, decision) {
       const completion = pendingCompletions.find((c) => c.id === completionId)
-      if (completion) completion.status = decision
+      if (completion) {
+        completion.status = decision
+        const challenge = challenges.find((candidate) => candidate.id === completion.challengeId)
+        if (challenge) {
+          challenge.status = decision
+          challenge.completed = decision === 'confirmed'
+        }
+      }
     },
     async updateDisplayName() {},
     async updatePassword() {},

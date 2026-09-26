@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import type { AppRepository } from '../data/appRepository'
-import type { PendingCompletion } from '../domain/types'
+import type { ChallengeIdea, ChallengeIdeaReview, PendingCompletion } from '../domain/types'
 import { ReviewQueue } from './ReviewQueue'
+import { ChallengeIdeaQueue } from './ChallengeIdeaQueue'
 
 export function AdminPage({ repository }: { repository: AppRepository }) {
   const [pending, setPending] = useState<PendingCompletion[]>([])
+  const [ideas, setIdeas] = useState<ChallengeIdea[]>([])
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   async function refresh() {
     try {
-      setPending(await repository.getPendingCompletions())
+      const [nextPending, nextIdeas] = await Promise.all([
+        repository.getPendingCompletions(),
+        repository.getPendingChallengeIdeas(),
+      ])
+      setPending(nextPending)
+      setIdeas(nextIdeas)
       setError('')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The review queue could not be loaded.')
@@ -26,10 +33,20 @@ export function AdminPage({ repository }: { repository: AppRepository }) {
     }
     await refresh()
   }
+  async function reviewIdea(id: string, review: ChallengeIdeaReview) {
+    try {
+      await repository.reviewChallengeIdea(id, review)
+      setMessage(review.decision === 'approved' ? 'Challenge published.' : 'Idea rejected.')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The idea could not be reviewed.')
+    }
+    await refresh()
+  }
   return <div className="page admin-page">
     <header className="page-header"><h1>Command the<br /><em>season.</em></h1></header>
     {message && <button className="success-banner" type="button" onClick={() => setMessage('')}>{message}<X aria-hidden="true" size={16} /></button>}
     {error && <p className="form-error" role="alert">{error}</p>}
+    <ChallengeIdeaQueue items={ideas} onReview={reviewIdea} />
     <ReviewQueue items={pending} onReview={review} />
   </div>
 }

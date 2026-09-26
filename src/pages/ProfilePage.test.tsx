@@ -50,4 +50,24 @@ describe('ProfilePage account controls', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('New passwords do not match.')
     expect(updatePassword).not.toHaveBeenCalled()
   })
+
+  it('renders heatmap dots for personal evergreen arc with full discipline completion', () => {
+    const customDashboard: DashboardSnapshot = {
+      ...dashboard,
+      dayNumber: 3,
+      completedDays: [0, 1],
+      completionRate: 67,
+    }
+    const { container } = render(
+      <ProfilePage dashboard={customDashboard} onSignOut={vi.fn()} onUpdateDisplayName={vi.fn()} onUpdatePassword={vi.fn()} />,
+    )
+    const dots = container.querySelectorAll('.heatmap span')
+    expect(dots).toHaveLength(100)
+    expect(dots[0]).toHaveClass('is-complete')
+    expect(dots[1]).toHaveClass('is-complete')
+    expect(dots[2]).toHaveClass('is-today')
+    expect(dots[2]).not.toHaveClass('is-complete')
+    expect(dots[3]).not.toHaveClass('is-complete')
+    expect(dots[3]).not.toHaveClass('is-today')
+  })
 })

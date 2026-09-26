@@ -1,16 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AppRepository } from './appRepository'
-import type { Challenge, Completion, DashboardSnapshot, LeaderboardEntry, PendingCompletion, ProgressEntry, RewardTier } from '../domain/types'
+import type { Challenge, ChallengeIdea, ChallengeIdeaReview, Completion, DashboardSnapshot, LeaderboardEntry, PendingCompletion, ProgressEntry, RewardTier } from '../domain/types'
+import { SEASON_DAYS, SEASON_START, localDayKey, personalArcDay, personalArcDayKey, seasonDay } from '../domain/challengeRules'
 
 type ChallengeRow = {
-  id: string; title: string; description: string; frequency: Challenge['frequency']; points: number;
+  id: string; catalog_id?: string; title: string; description: string; frequency: Challenge['frequency']; points: number;
   requires_approval: boolean; starts_on: string; ends_on: string; archived_at: string | null;
   completion_id?: string | null; completion_period_key?: string | null; completion_points_awarded?: number | null;
   completion_status?: Completion['status'] | null; completion_completed_at?: string | null;
   tracking_mode?: Challenge['trackingMode']; tracking_unit?: string | null; tracking_target?: number | null;
   entry_options?: number[]; entry_step?: number | null; burst_limit?: number; minimum_interval_minutes?: number; reward_tiers?: RewardTier[];
   progress?: number; secured_points?: number; cooldown_ends_at?: string | null; progress_entries?: ProgressEntry[]
-  attempt_ends_at?: string | null; attempt_failed?: boolean
+  attempt_ends_at?: string | null; attempt_failed?: boolean; scoring_profile?: Challenge['scoringProfile']
 }
 
 type CompletionRow = {
@@ -18,22 +19,13 @@ type CompletionRow = {
   status: Completion['status']; completed_at: string
 }
 
-function localPeriodKey(date = new Date()): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function todayInKarachi(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Karachi', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
-}
-
-function seasonDay() {
-  const today = new Date(`${todayInKarachi()}T00:00:00Z`)
-  const start = new Date('2026-09-23T00:00:00Z')
-  const day = Math.floor((today.getTime() - start.getTime()) / 86_400_000) + 1
-  return Math.max(0, Math.min(100, day))
+type ChallengeIdeaRow = {
+  id: string
+  title: string
+  description: string
+  status: ChallengeIdea['status']
+  submitted_by: string
+  created_at: string
 }
 
 function mapChallenge(row: ChallengeRow, completion?: CompletionRow): Challenge {
@@ -41,11 +33,11 @@ function mapChallenge(row: ChallengeRow, completion?: CompletionRow): Challenge 
   const progress = row.progress ?? 0
   const target = row.tracking_target ?? undefined
   return {
-    id: row.id, title: row.title, description: row.description, frequency: row.frequency, points: row.points,
+    id: row.id, catalogId: row.catalog_id, title: row.title, description: row.description, frequency: row.frequency, points: row.points,
     requiresApproval: row.requires_approval, category: row.frequency === 'once' ? 'craft' : 'discipline',
     metric: row.frequency === 'once' ? 'Season quest' : row.frequency,
     completed: trackingMode === 'binary' ? Boolean(completion) : Boolean(target && progress >= target), status: completion?.status,
-    trackingMode, unitLabel: row.tracking_unit ?? undefined, target, entryOptions: row.entry_options ?? [],
+    trackingMode, scoringProfile: row.scoring_profile ?? 'standard', unitLabel: row.tracking_unit ?? undefined, target, entryOptions: row.entry_options ?? [],
     entryStep: row.entry_step ?? undefined, burstLimit: row.burst_limit ?? 1, minimumIntervalMinutes: row.minimum_interval_minutes ?? 0, rewardTiers: row.reward_tiers ?? [],
     progress, securedPoints: row.secured_points ?? 0, cooldownEndsAt: row.cooldown_ends_at ?? undefined,
     attemptEndsAt: row.attempt_ends_at ?? undefined,
@@ -99,45 +91,150 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
       if (error) throw new Error('Challenge catalog could not be loaded.')
       return ((data ?? []) as ChallengeRow[]).map((row) => mapChallenge(row))
     },
-    async enrollChallenge(challengeId) {
-      const { error } = await client.rpc('enroll_challenge', { target_challenge_id: challengeId })
+    async submitChallengeIdea(title, description) {
+      const { error } = await client.rpc('submit_challenge_idea', {
+        idea_title: title,
+        idea_description: description,
+      })
+      if (error) throw new Error(error.message)
+    },
+    async getPendingChallengeIdeas(): Promise<ChallengeIdea[]> {
+      const { data, error } = await client.from('challenge_ideas').select('*').eq('status', 'pending').order('created_at')
+      if (error) throw new Error(error.message)
+      const rows = (data ?? []) as ChallengeIdeaRow[]
+      const userIds = [...new Set(rows.map((row) => row.submitted_by))]
+      const playerNames = new Map<string, string>()
+      if (userIds.length) {
+        const { data: profiles, error: profileError } = await client.from('profiles').select('id, display_name').in('id', userIds)
+        if (profileError) throw new Error(profileError.message)
+        for (const profile of (profiles ?? []) as Array<{ id: string; display_name: string }>) playerNames.set(profile.id, profile.display_name)
+      }
+      return rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        submittedBy: row.submitted_by,
+        submittedAt: row.created_at,
+        playerName: playerNames.get(row.submitted_by) ?? 'Player',
+      }))
+    },
+    async reviewChallengeIdea(ideaId, review: ChallengeIdeaReview) {
+      const { error } = await client.rpc('review_challenge_idea', {
+        target_idea_id: ideaId,
+        decision: review.decision,
+        challenge_frequency: review.frequency ?? null,
+        challenge_points: review.points ?? null,
+        completion_requires_approval: review.requiresApproval ?? false,
+      })
+      if (error) throw new Error(error.message)
+    },
+    async enrollChallenge(challengeId, customTarget) {
+      const { error } = await client.rpc('enroll_challenge', {
+        target_challenge_id: challengeId,
+        target_goal: customTarget ?? null,
+      })
+      if (error) throw new Error(error.message)
+    },
+    async upgradeChallengeTarget(challengeId, newTarget) {
+      const { error } = await client.rpc('upgrade_challenge_target', {
+        target_challenge_id: challengeId,
+        new_target: newTarget,
+      })
       if (error) throw new Error(error.message)
     },
     async getChallenges() {
       await currentUser()
-      const { data: rows, error } = await client.rpc('player_challenges', { target_period_key: localPeriodKey() })
+      const { data: rows, error } = await client.rpc('player_challenges', { target_period_key: localDayKey() })
       if (error) throw new Error('Challenges could not be loaded.')
       return ((rows ?? []) as ChallengeRow[]).map((row) => mapChallenge(row, completionFromChallenge(row)))
     },
     async getLeaderboard() { return leaderboard() },
     async getDashboard(): Promise<DashboardSnapshot> {
       const user = await currentUser()
-      const [{ data: profile, error }, challenges, ranks] = await Promise.all([
-        client.from('profiles').select('display_name, player_code').eq('id', user.id).single(), repository.getChallenges(), leaderboard(),
+      const [{ data: profile, error }, challenges, ranks, { data: userCompletions }] = await Promise.all([
+        client.from('profiles').select('display_name, player_code, created_at').eq('id', user.id).single(),
+        repository.getChallenges(),
+        leaderboard(),
+        client.from('completions').select('period_key, challenge_id, status').eq('user_id', user.id).eq('status', 'confirmed'),
       ])
       if (error || !profile) throw new Error('Profile could not be loaded.')
       const me = ranks.find((entry) => entry.id === user.id)
-      const dayNumber = seasonDay()
-      const completedDaily = challenges.filter((challenge) => challenge.frequency === 'daily' && challenge.completed).length
-      const dailyCount = challenges.filter((challenge) => challenge.frequency === 'daily').length
+      const arc = personalArcDay(profile.created_at ?? SEASON_START)
+      const dayNumber = arc.dayNumber
+      const totalDays = arc.totalDays
+      const daysRemaining = arc.daysRemaining
+
+      const dailyChallenges = challenges.filter((challenge) => challenge.frequency === 'daily')
+      const dailyCount = dailyChallenges.length
+      const dailyChallengeIds = new Set(dailyChallenges.map((c) => c.id))
+
+      const completedDailyByPeriod = new Map<string, Set<string>>()
+      for (const c of (userCompletions ?? []) as Array<{ period_key: string; challenge_id: string; status: string }>) {
+        if (c.period_key && dailyChallengeIds.has(c.challenge_id)) {
+          let set = completedDailyByPeriod.get(c.period_key)
+          if (!set) {
+            set = new Set()
+            completedDailyByPeriod.set(c.period_key, set)
+          }
+          set.add(c.challenge_id)
+        }
+      }
+
+      const completedDays: number[] = []
+      const arcStart = profile.created_at ?? SEASON_START
+      for (let i = 0; i < totalDays; i++) {
+        const periodKey = personalArcDayKey(arcStart, i)
+        const completedSet = completedDailyByPeriod.get(periodKey)
+        if (dailyCount > 0 && completedSet && completedSet.size >= dailyCount) {
+          completedDays.push(i)
+        }
+      }
+
+      const completedElapsed = completedDays.filter((i) => i < dayNumber).length
+      const completionRate = dayNumber > 0 ? Math.round((completedElapsed / dayNumber) * 100) : 0
+
+      let streak = 0
+      const todayIdx = dayNumber - 1
+      const completedDaysSet = new Set(completedDays)
+      let checkIdx = completedDaysSet.has(todayIdx) ? todayIdx : todayIdx - 1
+      while (checkIdx >= 0 && completedDaysSet.has(checkIdx)) {
+        streak++
+        checkIdx--
+      }
+
       const displayName = profile.display_name
       return {
-        profile: { id: user.id, playerCode: profile.player_code, displayName, initials: displayName.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(), isAdmin: user.app_metadata?.role === 'admin' },
-        dayNumber, totalDays: 100, daysRemaining: 100 - dayNumber, points: me?.points ?? 0, rank: me?.rank ?? ranks.length,
-        streak: 0, completionRate: dailyCount ? Math.round((completedDaily / dailyCount) * 100) : 0,
+        profile: {
+          id: user.id,
+          playerCode: profile.player_code,
+          displayName,
+          initials: displayName.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(),
+          isAdmin: user.app_metadata?.role === 'admin',
+          createdAt: profile.created_at,
+        },
+        dayNumber,
+        totalDays,
+        daysRemaining,
+        points: me?.points ?? 0,
+        rank: me?.rank ?? ranks.length,
+        streak,
+        completionRate,
         nearestRival: me && me.rank > 1 ? ranks[me.rank - 2] : undefined,
+        completedDays,
       }
     },
-    async completeChallenge(challengeId, periodKey = localPeriodKey()) {
+    async completeChallenge(challengeId, periodKey = localDayKey()) {
       const { data, error } = await client.rpc('complete_challenge', { target_challenge_id: challengeId, target_period_key: periodKey })
       if (error) throw new Error(error.code === '23505' ? 'This challenge is already complete for the current period.' : error.message)
       const row = (Array.isArray(data) ? data[0] : data) as CompletionRow
       return mapCompletion(row)
     },
-    async uncompleteChallenge(challengeId, periodKey = localPeriodKey()) {
+    async uncompleteChallenge(challengeId, periodKey = localDayKey()) {
       const { error } = await client.rpc('uncomplete_challenge', { target_challenge_id: challengeId, target_period_key: periodKey })
       if (error) throw new Error(error.message)
-    },    async recordChallengeProgress(challengeId, amount, periodKey) {
+    },
+    async recordChallengeProgress(challengeId, amount, periodKey) {
       const { error } = await client.rpc('record_challenge_progress', {
         target_challenge_id: challengeId, entry_amount: amount, target_period_key: periodKey,
       })

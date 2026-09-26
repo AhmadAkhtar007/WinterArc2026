@@ -3,17 +3,28 @@ import { BrandMark } from '../components/BrandMark'
 
 interface IntroSequenceProps {
   onComplete: () => void
+  now?: Date
 }
 
-const DAYS_IN_2026 = 365
-const ELAPSED_DAYS = 265
+function getYearStats(now: Date = new Date()) {
+  const year = now.getFullYear()
+  const startOfYear = new Date(year, 0, 1)
+  const startOfNextYear = new Date(year + 1, 0, 1)
+  const totalDays = Math.round((startOfNextYear.getTime() - startOfYear.getTime()) / 86_400_000)
+  const today = new Date(year, now.getMonth(), now.getDate())
+  const elapsedDays = Math.max(0, Math.min(totalDays, Math.floor((today.getTime() - startOfYear.getTime()) / 86_400_000)))
+  const remainingDays = totalDays - elapsedDays
+  const elapsedPercent = Math.round((elapsedDays / totalDays) * 100)
+  const remainingPercent = 100 - elapsedPercent
+  return { year, totalDays, elapsedDays, remainingDays, elapsedPercent, remainingPercent }
+}
 
-function YearDots({ remaining }: { remaining: boolean }) {
+function YearDots({ totalDays, elapsedDays, remaining }: { totalDays: number; elapsedDays: number; remaining: boolean }) {
   return <div className="intro-dots" aria-hidden="true">
-    {Array.from({ length: DAYS_IN_2026 }, (_, index) => {
+    {Array.from({ length: totalDays }, (_, index) => {
       const state = remaining
-        ? index < ELAPSED_DAYS ? 'inactive' : 'remaining'
-        : index < ELAPSED_DAYS ? 'elapsed' : 'inactive'
+        ? index < elapsedDays ? 'inactive' : 'remaining'
+        : index < elapsedDays ? 'elapsed' : 'inactive'
       return <span
         className={`intro-dot intro-dot--${state}`}
         data-testid="year-dot"
@@ -67,8 +78,9 @@ function CompoundChart() {
   </div>
 }
 
-export function IntroSequence({ onComplete }: IntroSequenceProps) {
+export function IntroSequence({ onComplete, now }: IntroSequenceProps) {
   const [step, setStep] = useState(0)
+  const { year, totalDays, elapsedDays, remainingDays, elapsedPercent, remainingPercent } = getYearStats(now)
 
   function continueIntro() {
     if (step === 2) onComplete()
@@ -79,21 +91,21 @@ export function IntroSequence({ onComplete }: IntroSequenceProps) {
     <div className="grain" aria-hidden="true" />
     <header className="intro-header">
       <BrandMark />
-      {step < 2 && <span className="intro-year">2026</span>}
+      {step < 2 && <span className="intro-year">{year}</span>}
       {step === 2 && <span className="intro-kicker">The final 100</span>}
     </header>
 
     <section className="intro-stage" aria-live="polite">
       <div className="intro-slide" key={step}>
         {step === 0 && <>
-          <h1><em>73%</em> of 2026 is already gone.</h1>
-          <p className="sr-only">265 days have passed and 100 days remain.</p>
-          <YearDots remaining={false} />
+          <h1><em>{elapsedPercent}%</em> of {year} is already gone.</h1>
+          <p className="sr-only">{elapsedDays} days have passed and {remainingDays} days remain.</p>
+          <YearDots totalDays={totalDays} elapsedDays={elapsedDays} remaining={false} />
         </>}
         {step === 1 && <>
-          <h1>But <em>27% remains.</em><br />What happens next is yours.</h1>
-          <p className="sr-only">265 days have passed and 100 days remain.</p>
-          <YearDots remaining />
+          <h1>But <em>{remainingPercent}% remains.</em><br />What happens next is yours.</h1>
+          <p className="sr-only">{elapsedDays} days have passed and {remainingDays} days remain.</p>
+          <YearDots totalDays={totalDays} elapsedDays={elapsedDays} remaining />
         </>}
         {step === 2 && <>
           <div className="compound-number">
