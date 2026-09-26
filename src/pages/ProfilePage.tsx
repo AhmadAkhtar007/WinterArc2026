@@ -11,14 +11,10 @@ interface ProfilePageProps {
   isStandalone?: boolean
 }
 
-const lifeDimensions = [
-  { name: 'Body', score: 62, tone: 'body' },
-  { name: 'Mind', score: 74, tone: 'mind' },
-  { name: 'Soul', score: 48, tone: 'soul' },
-  { name: 'Craft', score: 81, tone: 'craft' },
-] as const
-
 export function ProfilePage({ dashboard, onSignOut, onUpdateDisplayName, onUpdatePassword, onInstallApp, isStandalone }: ProfilePageProps) {
+  const lifeDimensions = (['body', 'mind', 'soul', 'craft'] as const).map((tone) => ({
+    name: tone[0].toUpperCase() + tone.slice(1), tone, score: dashboard.stats?.[tone] ?? 0,
+  }))
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -59,20 +55,19 @@ export function ProfilePage({ dashboard, onSignOut, onUpdateDisplayName, onUpdat
     <section className="profile-identity"><div className="profile-portrait"><span>{dashboard.profile.initials}</span></div><span className="section-kicker">{formatPlayerCode(dashboard.profile.playerCode)}</span><h1>{dashboard.profile.displayName}</h1></section>
     <section className="dimension-section" aria-labelledby="life-balance-heading">
       <h2 className="sr-only" id="life-balance-heading">Life balance</h2>
+      {!!dashboard.legacyPoints && <p>Earlier XP: {dashboard.legacyPoints} (uncategorized)</p>}
       <div className="dimension-grid">
         {lifeDimensions.map((dimension) => <article className={`dimension-card dimension-card--${dimension.tone}`} key={dimension.name}>
           <h3>{dimension.name}</h3>
-          <strong>{dimension.score}</strong>
-          <div className="dimension-meter" role="progressbar" aria-label={`${dimension.name} score`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={dimension.score}>
-            <span style={{ transform: `scaleX(${dimension.score / 100})` }} />
-          </div>
+          <strong>{dimension.score} XP</strong>
+
         </article>)}
       </div>
     </section>
     <section className="consistency-card"><div className="section-heading"><h2>100-day record</h2><span>{dashboard.completionRate}%</span></div><div className="heatmap" aria-label={`${dashboard.completionRate}% season completion`}>{Array.from({ length: 100 }, (_, day) => {
       const isComplete = dashboard.completedDays
         ? dashboard.completedDays.includes(day)
-        : day < dashboard.dayNumber && day % 7 !== 5
+        : false
       const isToday = day === dashboard.dayNumber - 1
       const className = [isComplete ? 'is-complete' : '', isToday ? 'is-today' : ''].filter(Boolean).join(' ')
       return <span key={day} className={className || undefined} />

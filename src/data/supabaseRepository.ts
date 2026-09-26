@@ -1,282 +1,141 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AppRepository } from './appRepository'
-import type { Challenge, ChallengeIdea, ChallengeIdeaReview, Completion, DashboardSnapshot, LeaderboardEntry, PendingCompletion, ProgressEntry, RewardTier } from '../domain/types'
-import { SEASON_DAYS, SEASON_START, localDayKey, personalArcDay, personalArcDayKey, seasonDay } from '../domain/challengeRules'
+import type { Challenge, ChallengeRules, Completion, DashboardSnapshot, LeaderboardEntry, PendingCompletion, ChallengeIdea } from '../domain/types'
+import { localDayKey, personalArcDay, personalArcDayKey } from '../domain/challengeRules'
 
-type ChallengeRow = {
-  id: string; catalog_id?: string; title: string; description: string; frequency: Challenge['frequency']; points: number;
-  requires_approval: boolean; starts_on: string; ends_on: string; archived_at: string | null;
-  completion_id?: string | null; completion_period_key?: string | null; completion_points_awarded?: number | null;
-  completion_status?: Completion['status'] | null; completion_completed_at?: string | null;
-  tracking_mode?: Challenge['trackingMode']; tracking_unit?: string | null; tracking_target?: number | null;
-  entry_options?: number[]; entry_step?: number | null; burst_limit?: number; minimum_interval_minutes?: number; reward_tiers?: RewardTier[];
-  progress?: number; secured_points?: number; cooldown_ends_at?: string | null; progress_entries?: ProgressEntry[]
-  attempt_ends_at?: string | null; attempt_failed?: boolean; scoring_profile?: Challenge['scoringProfile']
+interface CatalogRow {
+  id: string; season_id: string; title: string; description: string; category: Challenge['category']
+  frequency: Challenge['frequency']; rules: ChallengeRules; published: boolean; target_rewards: Record<string, number>
 }
-
-type CompletionRow = {
-  id: string; user_id: string; challenge_id: string; period_key: string; points_awarded: number;
-  status: Completion['status']; completed_at: string
+interface PlayerRow {
+  id: string; catalog_id: string; title: string; description: string; category: Challenge['category']
+  frequency: Challenge['frequency']; rules: ChallengeRules; target: number; progress: number
+  reward: number; baseline_reward: number; max_progress: number; active: boolean
+  starts_at: string; ends_at: string; pending_target?: number; pending_at?: string; period_id?: string
+  status: string; cooldown_ends_at?: string
 }
-
-type ChallengeIdeaRow = {
-  id: string
-  title: string
-  description: string
-  status: ChallengeIdea['status']
-  submitted_by: string
-  created_at: string
+interface Snapshot {
+  profile: { id: string; player_code: string; display_name: string; created_at: string }
+  seasons: Array<{ id: string; starts_on: string; ends_on: string }>
+  catalog: CatalogRow[]; challenges: PlayerRow[]
+  leaderboard: Array<{ id: string; display_name: string; points: number; completed_count: number }>
+  legacy_points: number
+  stats: NonNullable<DashboardSnapshot['stats']>
+  daily_history: Array<{ day: string; completed: boolean }>
+  pending: PendingCompletion[]; ideas: ChallengeIdea[]
 }
-
-function mapChallenge(row: ChallengeRow, completion?: CompletionRow): Challenge {
-  const trackingMode = row.tracking_mode ?? 'binary'
-  const progress = row.progress ?? 0
-  const target = row.tracking_target ?? undefined
+function initials(name: string) { return name.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase() }
+function catalogChallenge(row: CatalogRow): Challenge {
   return {
-    id: row.id, catalogId: row.catalog_id, title: row.title, description: row.description, frequency: row.frequency, points: row.points,
-    requiresApproval: row.requires_approval, category: row.frequency === 'once' ? 'craft' : 'discipline',
-    metric: row.frequency === 'once' ? 'Season quest' : row.frequency,
-    completed: trackingMode === 'binary' ? Boolean(completion) : Boolean(target && progress >= target), status: completion?.status,
-    trackingMode, scoringProfile: row.scoring_profile ?? 'standard', unitLabel: row.tracking_unit ?? undefined, target, entryOptions: row.entry_options ?? [],
-    entryStep: row.entry_step ?? undefined, burstLimit: row.burst_limit ?? 1, minimumIntervalMinutes: row.minimum_interval_minutes ?? 0, rewardTiers: row.reward_tiers ?? [],
-    progress, securedPoints: row.secured_points ?? 0, cooldownEndsAt: row.cooldown_ends_at ?? undefined,
-    attemptEndsAt: row.attempt_ends_at ?? undefined,
-    attemptFailed: row.attempt_failed ?? false,
-    progressEntries: row.progress_entries ?? [],
+    id: row.id, seasonId: row.season_id, title: row.title, description: row.description,
+    category: row.category, frequency: row.frequency, rules: row.rules, published: row.published,
+    points: row.target_rewards[String(row.rules.initialTargets[0])] ?? 0, targetRewards: row.target_rewards, requiresApproval: row.rules.approval, completed: false, target: row.rules.initialTargets[0],
+    trackingMode: row.rules.mode, unitLabel: row.rules.unit,
   }
 }
-
-function completionFromChallenge(row: ChallengeRow): CompletionRow | undefined {
-  if (!row.completion_id || !row.completion_period_key || !row.completion_status || !row.completion_completed_at) return undefined
+function playerChallenge(row: PlayerRow): Challenge {
   return {
-    id: row.completion_id,
-    user_id: '',
-    challenge_id: row.id,
-    period_key: row.completion_period_key,
-    points_awarded: row.completion_points_awarded ?? row.points,
-    status: row.completion_status,
-    completed_at: row.completion_completed_at,
+    id: row.id, catalogId: row.catalog_id, title: row.title, description: row.description,
+    category: row.category, frequency: row.frequency, rules: row.rules, target: row.target,
+    progress: row.progress, securedPoints: row.reward, points: row.baseline_reward, maxProgress: row.max_progress,
+    active: row.active, startsAt: row.starts_at, pendingTarget: row.pending_target, pendingAt: row.pending_at,
+    periodId: row.period_id, requiresApproval: row.rules.approval,
+    completed: row.progress >= row.target && row.status !== 'rejected' && row.status !== 'failed',
+    status: row.status === 'pending' ? 'pending' : row.status === 'rejected' ? 'reversed'
+      : row.status === 'confirmed' || (row.progress >= row.target && !row.rules.approval) ? 'confirmed' : undefined,
+    trackingMode: row.rules.mode, unitLabel: row.rules.unit, entryStep: row.rules.step || undefined,
+    cooldownEndsAt: row.cooldown_ends_at,
+    attemptEndsAt: row.frequency === 'once' && row.rules.durationMinutes > 0 ? row.ends_at : undefined,
+    attemptFailed: row.status === 'failed', attemptDurationMinutes: row.rules.durationMinutes,
   }
 }
-
-function mapCompletion(row: CompletionRow): Completion {
-  return { id: row.id, challengeId: row.challenge_id, periodKey: row.period_key, pointsAwarded: row.points_awarded, status: row.status, completedAt: row.completed_at }
-}
-
 export function createSupabaseRepository(client: SupabaseClient): AppRepository {
-  async function currentUser() {
-    const { data, error } = await client.auth.getUser()
-    if (error || !data.user) throw new Error('Your session has expired. Please sign in again.')
-    return data.user
+  let pending: Promise<Snapshot> | undefined
+  async function snapshot() {
+    if (!pending) {
+      pending = (async () => {
+        const { data, error } = await client.rpc('arc_snapshot')
+        if (error) throw new Error(error.message)
+        return data as Snapshot
+      })()
+      const current = pending
+      void current.finally(() => { if (pending === current) pending = undefined }).catch(() => {})
+    }
+    return pending
   }
-
-  async function leaderboard(): Promise<LeaderboardEntry[]> {
-    const user = await currentUser()
-    const { data, error } = await client.rpc('player_leaderboard')
-    if (error) throw new Error('Leaderboard could not be loaded.')
-    return ((data ?? []) as Array<{ id: string; display_name: string; points: number; completed_count: number }>).map((row, index) => ({
-      id: row.id,
-      rank: index + 1,
-      displayName: row.display_name,
-      initials: row.display_name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase(),
-      points: row.points,
-      completedCount: row.completed_count,
-      isCurrentPlayer: row.id === user.id,
+  async function mutate(name: string, args: Record<string, unknown>) {
+    const { data, error } = await client.rpc(name, args)
+    if (error) throw new Error(error.message)
+    pending = undefined
+    return data
+  }
+  function ranks(s: Snapshot): LeaderboardEntry[] {
+    return s.leaderboard.map((r, i) => ({
+      id: r.id, rank: i + 1, displayName: r.display_name, initials: initials(r.display_name),
+      points: r.points, completedCount: r.completed_count, isCurrentPlayer: r.id === s.profile.id,
     }))
   }
   const repository: AppRepository = {
-    async getChallengeCatalog() {
-      await currentUser()
-      const { data, error } = await client.from('challenges').select('*').is('archived_at', null)
-      if (error) throw new Error('Challenge catalog could not be loaded.')
-      return ((data ?? []) as ChallengeRow[]).map((row) => mapChallenge(row))
-    },
-    async submitChallengeIdea(title, description) {
-      const { error } = await client.rpc('submit_challenge_idea', {
-        idea_title: title,
-        idea_description: description,
-      })
-      if (error) throw new Error(error.message)
-    },
-    async getPendingChallengeIdeas(): Promise<ChallengeIdea[]> {
-      const { data, error } = await client.from('challenge_ideas').select('*').eq('status', 'pending').order('created_at')
-      if (error) throw new Error(error.message)
-      const rows = (data ?? []) as ChallengeIdeaRow[]
-      const userIds = [...new Set(rows.map((row) => row.submitted_by))]
-      const playerNames = new Map<string, string>()
-      if (userIds.length) {
-        const { data: profiles, error: profileError } = await client.from('profiles').select('id, display_name').in('id', userIds)
-        if (profileError) throw new Error(profileError.message)
-        for (const profile of (profiles ?? []) as Array<{ id: string; display_name: string }>) playerNames.set(profile.id, profile.display_name)
-      }
-      return rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        status: row.status,
-        submittedBy: row.submitted_by,
-        submittedAt: row.created_at,
-        playerName: playerNames.get(row.submitted_by) ?? 'Player',
-      }))
-    },
-    async reviewChallengeIdea(ideaId, review: ChallengeIdeaReview) {
-      const { error } = await client.rpc('review_challenge_idea', {
-        target_idea_id: ideaId,
-        decision: review.decision,
-        challenge_frequency: review.frequency ?? null,
-        challenge_points: review.points ?? null,
-        completion_requires_approval: review.requiresApproval ?? false,
-      })
-      if (error) throw new Error(error.message)
-    },
-    async enrollChallenge(challengeId, customTarget) {
-      const { error } = await client.rpc('enroll_challenge', {
-        target_challenge_id: challengeId,
-        target_goal: customTarget ?? null,
-      })
-      if (error) throw new Error(error.message)
-    },
-    async upgradeChallengeTarget(challengeId, newTarget) {
-      const { error } = await client.rpc('upgrade_challenge_target', {
-        target_challenge_id: challengeId,
-        new_target: newTarget,
-      })
-      if (error) throw new Error(error.message)
-    },
-    async getChallenges() {
-      await currentUser()
-      const { data: rows, error } = await client.rpc('player_challenges', { target_period_key: localDayKey() })
-      if (error) throw new Error('Challenges could not be loaded.')
-      return ((rows ?? []) as ChallengeRow[]).map((row) => mapChallenge(row, completionFromChallenge(row)))
-    },
-    async getLeaderboard() { return leaderboard() },
-    async getDashboard(): Promise<DashboardSnapshot> {
-      const user = await currentUser()
-      const [{ data: profile, error }, challenges, ranks, { data: userCompletions }] = await Promise.all([
-        client.from('profiles').select('display_name, player_code, created_at').eq('id', user.id).single(),
-        repository.getChallenges(),
-        leaderboard(),
-        client.from('completions').select('period_key, challenge_id, status').eq('user_id', user.id).eq('status', 'confirmed'),
-      ])
-      if (error || !profile) throw new Error('Profile could not be loaded.')
-      const me = ranks.find((entry) => entry.id === user.id)
-      const arc = personalArcDay(profile.created_at ?? SEASON_START)
-      const dayNumber = arc.dayNumber
-      const totalDays = arc.totalDays
-      const daysRemaining = arc.daysRemaining
-
-      const dailyChallenges = challenges.filter((challenge) => challenge.frequency === 'daily')
-      const dailyCount = dailyChallenges.length
-      const dailyChallengeIds = new Set(dailyChallenges.map((c) => c.id))
-
-      const completedDailyByPeriod = new Map<string, Set<string>>()
-      for (const c of (userCompletions ?? []) as Array<{ period_key: string; challenge_id: string; status: string }>) {
-        if (c.period_key && dailyChallengeIds.has(c.challenge_id)) {
-          let set = completedDailyByPeriod.get(c.period_key)
-          if (!set) {
-            set = new Set()
-            completedDailyByPeriod.set(c.period_key, set)
-          }
-          set.add(c.challenge_id)
-        }
-      }
-
-      const completedDays: number[] = []
-      const arcStart = profile.created_at ?? SEASON_START
-      for (let i = 0; i < totalDays; i++) {
-        const periodKey = personalArcDayKey(arcStart, i)
-        const completedSet = completedDailyByPeriod.get(periodKey)
-        if (dailyCount > 0 && completedSet && completedSet.size >= dailyCount) {
-          completedDays.push(i)
-        }
-      }
-
-      const completedElapsed = completedDays.filter((i) => i < dayNumber).length
-      const completionRate = dayNumber > 0 ? Math.round((completedElapsed / dayNumber) * 100) : 0
-
+    async getChallengeCatalog() { return (await snapshot()).catalog.map(catalogChallenge) },
+    async getChallenges() { return (await snapshot()).challenges.map(playerChallenge) },
+    async getLeaderboard() { return ranks(await snapshot()) },
+    async getDashboard() {
+      const s = await snapshot()
+      const { data, error } = await client.auth.getUser()
+      if (error || !data.user) throw new Error('Sign in again.')
+      const arc = personalArcDay(s.profile.created_at)
+      const completed = new Set(s.daily_history.filter((d) => d.completed).map((d) => d.day))
+      const completedDays = Array.from({ length: arc.totalDays }, (_, i) => i)
+        .filter((i) => completed.has(personalArcDayKey(s.profile.created_at, i)))
       let streak = 0
-      const todayIdx = dayNumber - 1
-      const completedDaysSet = new Set(completedDays)
-      let checkIdx = completedDaysSet.has(todayIdx) ? todayIdx : todayIdx - 1
-      while (checkIdx >= 0 && completedDaysSet.has(checkIdx)) {
-        streak++
-        checkIdx--
-      }
-
-      const displayName = profile.display_name
+      let i = completed.has(localDayKey()) ? arc.dayNumber - 1 : arc.dayNumber - 2
+      while (i >= 0 && completedDays.includes(i)) { streak++; i-- }
+      const leaderboard = ranks(s)
+      const me = leaderboard.find((r) => r.isCurrentPlayer)
       return {
-        profile: {
-          id: user.id,
-          playerCode: profile.player_code,
-          displayName,
-          initials: displayName.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(),
-          isAdmin: user.app_metadata?.role === 'admin',
-          createdAt: profile.created_at,
-        },
-        dayNumber,
-        totalDays,
-        daysRemaining,
-        points: me?.points ?? 0,
-        rank: me?.rank ?? ranks.length,
-        streak,
-        completionRate,
-        nearestRival: me && me.rank > 1 ? ranks[me.rank - 2] : undefined,
-        completedDays,
+        profile: { id: s.profile.id, playerCode: s.profile.player_code, displayName: s.profile.display_name,
+          initials: initials(s.profile.display_name), createdAt: s.profile.created_at, isAdmin: data.user.app_metadata?.role === 'admin' },
+        ...arc, points: me?.points ?? 0, rank: me?.rank ?? 0, streak, completedDays, stats: s.stats, legacyPoints: s.legacy_points,
+        completionRate: s.daily_history.length ? Math.round(completed.size / s.daily_history.length * 100) : 0,
+        nearestRival: me && me.rank > 1 ? leaderboard[me.rank - 2] : undefined,
       }
     },
-    async completeChallenge(challengeId, periodKey = localDayKey()) {
-      const { data, error } = await client.rpc('complete_challenge', { target_challenge_id: challengeId, target_period_key: periodKey })
-      if (error) throw new Error(error.code === '23505' ? 'This challenge is already complete for the current period.' : error.message)
-      const row = (Array.isArray(data) ? data[0] : data) as CompletionRow
-      return mapCompletion(row)
+    async enrollChallenge(challengeId, target) {
+      const d = (await snapshot()).catalog.find((c) => c.id === challengeId)
+      if (!d) throw new Error('Challenge unavailable.')
+      await mutate('arc_join', { challenge: challengeId, chosen_target: target ?? d.rules.initialTargets[0] })
     },
-    async uncompleteChallenge(challengeId, periodKey = localDayKey()) {
-      const { error } = await client.rpc('uncomplete_challenge', { target_challenge_id: challengeId, target_period_key: periodKey })
-      if (error) throw new Error(error.message)
+    async upgradeChallengeTarget(id, target) { await mutate('arc_upgrade', { commitment: id, new_target: target }) },
+    async recordChallengeProgress(id, amount, _period, requestId = crypto.randomUUID()) {
+      await mutate('arc_record', { commitment: id, amount, request_id: requestId })
     },
-    async recordChallengeProgress(challengeId, amount, periodKey) {
-      const { error } = await client.rpc('record_challenge_progress', {
-        target_challenge_id: challengeId, entry_amount: amount, target_period_key: periodKey,
-      })
-      if (error) throw new Error(error.message)
+    async completeChallenge(id) {
+      await repository.recordChallengeProgress(id, 1, '')
+      const c = (await repository.getChallenges()).find((row) => row.id === id)!
+      return { id: c.periodId!, challengeId: id, periodKey: localDayKey(), pointsAwarded: c.securedPoints ?? 0,
+        status: c.status ?? 'confirmed', completedAt: new Date().toISOString() } as Completion
     },
-    async removeChallengeProgressEntry(challengeId, entryId, periodKey) {
-      const { error } = await client.rpc('remove_challenge_progress_entry', {
-        target_challenge_id: challengeId, target_entry_id: entryId, target_period_key: periodKey,
-      })
-      if (error) throw new Error(error.message)
+    async getPendingCompletions() { return (await snapshot()).pending },
+    async reviewCompletion(id, decision) { await mutate('arc_review', { period: id, approve: decision === 'confirmed' }) },
+    async submitChallengeIdea(title, description) { await mutate('arc_submit_idea', { idea_title: title, idea_description: description }) },
+    async getPendingChallengeIdeas() { return (await snapshot()).ideas },
+    async reviewChallengeIdea(id, review) {
+      if (review.decision === 'approved' && !review.definition) throw new Error('Configure the challenge before publishing.')
+      await mutate('arc_review_idea', { idea: id, payload: review.decision === 'approved' ? review.definition : null })
     },
-    async getPendingCompletions(): Promise<PendingCompletion[]> {
-      const { data, error } = await client.from('completions').select('*, challenges(title)').eq('status', 'pending').order('completed_at')
-      if (error) throw new Error(error.message)
-      const rows = (data ?? []) as Array<CompletionRow & { challenges: { title: string } | null }>
-      const userIds = [...new Set(rows.map((row) => row.user_id))]
-      const playerNames = new Map<string, string>()
-      if (userIds.length) {
-        const { data: profiles, error: profileError } = await client.from('profiles').select('id, display_name').in('id', userIds)
-        if (profileError) throw new Error(profileError.message)
-        for (const profile of (profiles ?? []) as Array<{ id: string; display_name: string }>) playerNames.set(profile.id, profile.display_name)
-      }
-      return rows.map((row) => ({ ...mapCompletion(row), playerName: playerNames.get(row.user_id) ?? 'Player', challengeTitle: row.challenges?.title ?? 'Challenge' }))
-    },
-    async reviewCompletion(completionId, decision) {
-      const { error } = await client.rpc('review_completion', { target_completion_id: completionId, decision })
-      if (error) throw new Error(error.message)
-    },
+    async saveChallenge(definition) { await mutate('arc_save_challenge', { payload: definition }) },
     async updateDisplayName(displayName) {
-      const user = await currentUser()
-      const cleanName = displayName.trim()
-      if (cleanName.length < 2 || cleanName.length > 40) throw new Error('Display name must be 2 to 40 characters.')
-      const { error } = await client.from('profiles').update({ display_name: cleanName }).eq('id', user.id)
+      const s = await snapshot()
+      const { error } = await client.from('profiles').update({ display_name: displayName.trim() }).eq('id', s.profile.id)
       if (error) throw new Error(error.message)
     },
     async updatePassword(currentPassword, password) {
-      const user = await currentUser()
-      if (!user.email) throw new Error('This account cannot change its password.')
-      const { error: verifyError } = await client.auth.signInWithPassword({ email: user.email, password: currentPassword })
-      if (verifyError) throw new Error('Current password is incorrect.')
-      const { error } = await client.auth.updateUser({ password })
-      if (error) throw new Error(error.message)
+      const { data, error } = await client.auth.getUser()
+      if (error || !data.user?.email) throw new Error('Sign in again.')
+      const { error: signInError } = await client.auth.signInWithPassword({ email: data.user.email, password: currentPassword })
+      if (signInError) throw new Error('Current password is incorrect.')
+      const { error: updateError } = await client.auth.updateUser({ password })
+      if (updateError) throw new Error(updateError.message)
     },
     async signOut() { const { error } = await client.auth.signOut(); if (error) throw new Error(error.message) },
   }

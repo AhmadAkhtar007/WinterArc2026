@@ -95,7 +95,7 @@ export function AppShell({ repository }: { repository: AppRepository }) {
     let timeout = 0
     const scheduleMidnightRefresh = () => {
       const nextMidnight = new Date()
-      nextMidnight.setHours(24, 0, 0, 100)
+      nextMidnight.setTime(Date.parse(localDayKey() + 'T00:00:00+05:00') + 86400100)
       timeout = window.setTimeout(() => {
         void refresh().finally(scheduleMidnightRefresh)
       }, nextMidnight.getTime() - Date.now())
@@ -107,7 +107,7 @@ export function AppShell({ repository }: { repository: AppRepository }) {
   async function toggleChallenge(challengeId: string, completed: boolean) {
     const previousChallenges = challenges
     const challenge = previousChallenges.find((item) => item.id === challengeId)
-    if (!challenge || (challenge.trackingMode ?? 'binary') !== 'binary') return
+    if (!completed || !challenge || (challenge.trackingMode ?? 'binary') !== 'binary') return
 
     setChallenges((currentChallenges) => currentChallenges.map((item) => item.id === challengeId
       ? { ...item, completed, status: completed && item.requiresApproval ? 'pending' : completed ? 'confirmed' : undefined }
@@ -115,8 +115,7 @@ export function AppShell({ repository }: { repository: AppRepository }) {
     setBusyChallenge(challengeId)
     setError(null)
     try {
-      if (completed) await repository.completeChallenge(challengeId, localDayKey())
-      else await repository.uncompleteChallenge(challengeId, localDayKey())
+      await repository.completeChallenge(challengeId, localDayKey())
       void refresh()
     } catch (completionError) {
       setChallenges(previousChallenges)
@@ -126,7 +125,7 @@ export function AppShell({ repository }: { repository: AppRepository }) {
     }
   }
 
-  async function recordChallengeProgress(challengeId: string, amount: number) {
+  async function recordChallengeProgress(challengeId: string, amount: number, requestId?: string) {
     const previousChallenges = challenges
     const challenge = previousChallenges.find((item) => item.id === challengeId)
     if (!challenge) return
@@ -135,7 +134,7 @@ export function AppShell({ repository }: { repository: AppRepository }) {
     setBusyChallenge(challengeId)
     setError(null)
     try {
-      await repository.recordChallengeProgress(challengeId, amount, periodKeyFor(challenge))
+      await repository.recordChallengeProgress(challengeId, amount, periodKeyFor(challenge), requestId)
       void refresh()
     } catch (progressError) {
       setChallenges(previousChallenges)
@@ -151,7 +150,7 @@ export function AppShell({ repository }: { repository: AppRepository }) {
   }
 
   const committedIds = new Set(challenges
-    .filter((challenge) => challenge.frequency !== 'once' || challenge.status !== 'confirmed')
+    .filter((challenge) => challenge.active !== false && (challenge.frequency !== 'once' || challenge.status !== 'confirmed'))
     .map((challenge) => challenge.catalogId ?? challenge.id))
 
   return (

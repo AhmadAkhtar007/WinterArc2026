@@ -1,1 +1,2 @@
--- Challenge rows are populated idempotently by the tracked daily challenge migration when an authenticated creator exists.
+-- Initial catalog and season are included in the shared engine migration.
+-- New challenges are published from Command, never by re-running seed scripts.

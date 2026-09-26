@@ -1,5 +1,6 @@
 import type {
   Challenge,
+  ChallengeDefinition,
   ChallengeIdea,
   ChallengeIdeaReview,
   Completion,
@@ -9,6 +10,7 @@ import type {
 } from '../domain/types'
 
 export interface AppRepository {
+  saveChallenge(definition: ChallengeDefinition): Promise<void>
   getDashboard(): Promise<DashboardSnapshot>
   getChallenges(): Promise<Challenge[]>
   getChallengeCatalog(): Promise<Challenge[]>
@@ -19,9 +21,7 @@ export interface AppRepository {
   upgradeChallengeTarget(challengeId: string, newTarget: number): Promise<void>
   getLeaderboard(): Promise<LeaderboardEntry[]>
   completeChallenge(challengeId: string, periodKey?: string): Promise<Completion>
-  uncompleteChallenge(challengeId: string, periodKey?: string): Promise<void>
-  recordChallengeProgress(challengeId: string, amount: number, periodKey: string): Promise<void>
-  removeChallengeProgressEntry(challengeId: string, entryId: string, periodKey: string): Promise<void>
+  recordChallengeProgress(challengeId: string, amount: number, periodKey: string, requestId?: string): Promise<void>
   getPendingCompletions(): Promise<PendingCompletion[]>
   reviewCompletion(completionId: string, decision: 'confirmed' | 'reversed'): Promise<void>
   updateDisplayName(displayName: string): Promise<void>

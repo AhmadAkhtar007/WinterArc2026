@@ -10,7 +10,7 @@ const challenge: Challenge = {
   frequency: 'daily',
   points: 10,
   requiresApproval: false,
-  category: 'discipline',
+  category: 'soul',
   metric: 'daily',
   completed: false,
 }

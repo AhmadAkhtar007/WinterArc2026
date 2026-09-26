@@ -122,41 +122,18 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .complete-button:not(:disabled):active { transform: scale(.94); }
 .challenge-card.is-complete .complete-button { border-color: var(--ice); background: var(--ice); color: var(--black); box-shadow: 0 3px 10px rgba(168,216,232,.12); }
 .complete-button:disabled { cursor: default; }
-.tracked-card { position: relative; min-height: 76px; grid-template-rows: auto auto 3px; row-gap: 5px; cursor: pointer; }
+.tracked-card { position: relative; min-height: 76px; grid-template-rows: auto auto; row-gap: 5px; }
 .tracked-card .tracked-card__action { grid-column: 1; grid-row: 1 / 4; align-self: center; }
 .tracked-card h3 { grid-column: 2; grid-row: 1; align-self: end; }
 .tracked-card > .points { grid-column: 3; grid-row: 1; align-self: end; }
-.tracked-card__timer { color: var(--ice-bright); font-variant-numeric: tabular-nums; letter-spacing: .08em; }
-.tracked-card__failed { color: var(--danger); letter-spacing: .08em; }
-.tracked-card__progress { grid-column: 2 / 4; grid-row: 2; color: var(--muted); font-size: 10px; line-height: 14px; }
-.tracked-card.is-editing { border-color: rgba(168,216,232,.28); background: #181b1d; box-shadow: inset 0 1px rgba(216,245,255,.05), 0 10px 30px rgba(0,0,0,.16); }
-.tracked-card__inline-entry { grid-column: 2 / 4; grid-row: 2; min-width: 0; display: flex; align-items: baseline; gap: 8px; color: var(--ice); }
-.tracked-card__inline-entry input { min-width: 0; width: 100%; border: 0; border-bottom: 1px solid rgba(168,216,232,.32); outline: 0; padding: 0 0 3px; background: transparent; color: var(--bone); font: 400 18px/20px var(--display); }
-.tracked-card__inline-entry input:focus { border-color: var(--ice-bright); }
-.tracked-card__inline-entry input::-webkit-inner-spin-button,
-.tracked-card__inline-entry input::-webkit-outer-spin-button { margin: 0; appearance: none; }
-.tracked-card__inline-entry input[type='number'] { appearance: textfield; }
-.tracked-card__inline-entry strong { flex: 0 0 auto; color: var(--muted); font-size: 10px; font-weight: 500; text-transform: lowercase; }
-.tracked-card__meter { grid-column: 2 / 4; grid-row: 3; display: block; height: 3px; overflow: hidden; border-radius: 999px; background: #22282c; }
-.tracked-card__meter i { display: block; height: 100%; border-radius: inherit; background: var(--ice); transition: width .35s var(--ease-heavy); }
 .tracked-card.is-complete .tracked-card__action { border-color: var(--ice); background: var(--ice); color: var(--black); box-shadow: 0 3px 10px rgba(168,216,232,.12); }
 .tracked-card.is-locked { cursor: default; }
-.tracked-card__upgrade { margin-left: 8px; border: 1px solid rgba(168,216,232,.2); border-radius: 4px; background: rgba(168,216,232,.08); color: var(--ice); font: 500 10px/1.2 var(--body); padding: 2px 6px; cursor: pointer; vertical-align: middle; transition: all .2s ease; }
-.tracked-card__upgrade:hover { background: rgba(168,216,232,.18); border-color: var(--ice); color: var(--ice-bright); }
-.season-proof-card { min-height: 76px; grid-template-rows: auto auto; row-gap: 4px; }
-.season-proof-card .season-proof-card__action { grid-column: 1; grid-row: 1 / 3; align-self: center; }
-.season-proof-card h3 { grid-column: 2; grid-row: 1; align-self: center; white-space: normal; line-height: 17px; }
-.season-proof-card > .points { grid-column: 3; grid-row: 1; align-self: start; padding-top: 2px; }
-.season-proof-card__title--approved { color: var(--bone) !important; text-decoration: none !important; }
-.season-proof-card__instruction { grid-column: 2 / 4; grid-row: 2; color: var(--ice); font-size: 10px; line-height: 14px; }
 .challenge-card.is-pending { border-color: rgba(239,123,69,.16); }
 .challenge-card.is-pending .complete-button { border-color: rgba(239,123,69,.4); color: var(--ember); }
 .challenge-card.is-pending .points { color: var(--ember); }
 .challenge-card.is-rejected { border-color: rgba(224,101,101,.16); }
 .challenge-card.is-rejected .complete-button { border-color: rgba(224,101,101,.4); color: var(--danger); }
 .challenge-card.is-rejected .points { color: var(--muted); }
-.season-proof-card.is-pending .season-proof-card__instruction { color: var(--ember); }
-.season-proof-card.is-rejected .season-proof-card__instruction { color: var(--danger); }
 .modal-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 24px; background: rgba(2,3,4,.74); backdrop-filter: blur(8px); }
 .modal { width: min(100%, 420px); max-height: min(80dvh, 640px); overflow-y: auto; display: grid; gap: 20px; border: 1px solid rgba(168,216,232,.14); border-radius: 24px; padding: 24px; background: #0d1012; box-shadow: 0 30px 80px rgba(0,0,0,.6); outline: none; }
 .modal h2 { margin: 0; color: var(--bone); font: 400 25px/1.15 var(--display); }
@@ -166,13 +143,6 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .modal__list strong { overflow: hidden; color: #dedbd5; font: 400 13px/17px var(--body); text-overflow: ellipsis; white-space: nowrap; }
 .modal__list small { color: var(--muted); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 .modal__list li > span { color: var(--ice); font: 700 10px/14px var(--body); white-space: nowrap; }
-.gym-picker { display: grid; gap: 8px; margin-top: 8px; padding: 10px 12px; border: 1px solid rgba(168,216,232,.18); border-radius: 14px; background: rgba(168,216,232,.04); }
-.gym-picker__title { color: var(--silver); font-size: 11px; font-weight: 500; }
-.gym-picker__pills { display: flex; gap: 6px; flex-wrap: wrap; }
-.gym-picker__pill { min-width: 36px; height: 30px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; background: #181b1d; color: var(--muted); font: 600 11px/1 var(--body); cursor: pointer; transition: all .2s ease; }
-.gym-picker__pill.is-active { border-color: var(--ice); background: var(--ice); color: #081014; }
-.gym-picker__summary { display: flex; justify-content: space-between; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; line-height: 14px; }
-.gym-picker__summary strong { color: var(--ice-bright); font-weight: 700; }
 .modal__stakes { margin: 0; color: var(--silver); font-size: 11px; line-height: 16px; }
 .modal__actions { display: grid; gap: 8px; }
 .idea-form > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 17px; }
@@ -368,3 +338,14 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
   .challenge-grid { grid-template-columns: repeat(3,1fr); } .challenge-card--feature { grid-column: span 2; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+
+/* Shared challenge configuration and progress controls. */
+.tracked-card__detail { grid-column: 2 / -1; font-size: .8rem; }
+.tracked-card__detail p { margin: .4rem 0; }
+.tracked-card__detail input { width: 8rem; }
+.challenge-editor { display: grid; gap: .85rem; }
+.challenge-editor label, .rule-field { display: grid; gap: .3rem; }
+.challenge-editor input, .challenge-editor select, .challenge-editor textarea, .rule-field select { max-width: 100%; padding: .55rem; }
+.challenge-editor input[type=checkbox] { width: auto; }
+.rule-row { display: flex; align-items: end; gap: .5rem; margin: .5rem 0; }
+.rule-row input { width: 7rem; }

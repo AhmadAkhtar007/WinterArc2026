@@ -1,6 +1,6 @@
 import type { AppRepository } from '../data/appRepository'
 import type { Challenge, ChallengeIdea, Completion, DashboardSnapshot, LeaderboardEntry, PendingCompletion } from '../domain/types'
-import { scoringBreakdown, scoringProfileFor } from '../domain/challengeRules'
+import { defaultRules } from '../admin/ChallengeEditor'
 
 const defaultCatalog: Challenge[] = [
   {
@@ -68,7 +68,8 @@ const defaultCatalog: Challenge[] = [
     category: 'body',
     completed: false,
     trackingMode: 'occurrence',
-    scoringProfile: 'gym',
+    rules: { ...defaultRules, mode: 'occurrence', unit: 'sessions', targets: [1,2,3,4,5,6,7], initialTargets: [1,2,3,4,5,6,7], cap: 7, step: 1, ratePoints: 10, targetBonus: 50, gate: 'immediate' },
+    maxProgress: 7, targetRewards: { '1': 60, '2': 70, '3': 80, '4': 90, '5': 100, '6': 110, '7': 120 },
     unitLabel: 'sessions',
     target: 4,
     entryOptions: [1],
@@ -87,7 +88,8 @@ const defaultCatalog: Challenge[] = [
     category: 'body',
     completed: false,
     trackingMode: 'quantity',
-    scoringProfile: 'pushups',
+    rules: { ...defaultRules, mode: 'quantity', unit: 'reps', targets: [50,100,150,200], initialTargets: [50,100], cap: 0, capMultiplier: 2, step: 0, rateEvery: 10, ratePoints: 1, targetBonus: 0 },
+    maxProgress: 200, targetRewards: { '50': 5, '100': 10, '150': 15, '200': 20 },
     unitLabel: 'reps',
     target: 100,
     progress: 0,
@@ -125,7 +127,7 @@ export function createTestRepository({
   pendingIdea = false,
   initialChallenges,
 }: TestRepositoryOptions = {}): AppRepository {
-  const catalog = defaultCatalog.map((c) => ({ ...c }))
+  const catalog = defaultCatalog.map((c) => ({ ...c, seasonId: 'test-season', published: true }))
   let challenges: Challenge[] = initialChallenges
     ? [...initialChallenges]
     : pending
@@ -159,6 +161,11 @@ export function createTestRepository({
     : []
 
   return {
+    async saveChallenge(d) {
+      const row: Challenge = { ...d, id: d.id ?? 'new-challenge', points: d.rules.targetBonus,
+        requiresApproval: d.rules.approval, trackingMode: d.rules.mode, completed: false }
+      catalog.push({ ...row, seasonId: d.seasonId, published: d.published })
+    },
     async getDashboard() {
       return dashboard(admin)
     },
@@ -187,18 +194,9 @@ export function createTestRepository({
       if (!idea) throw new Error('Pending idea not found.')
       idea.status = review.decision
       if (review.decision === 'approved') {
-        if (!review.frequency || !review.points) throw new Error('Frequency and XP are required.')
-        catalog.push({
-          id: `published-${idea.id}`,
-          title: idea.title,
-          description: idea.description,
-          frequency: review.frequency,
-          points: review.points,
-          requiresApproval: review.requiresApproval ?? false,
-          category: review.frequency === 'once' ? 'craft' : 'discipline',
-          completed: false,
-          trackingMode: 'binary',
-        })
+        const d = review.definition!
+        catalog.push({ ...d, id: 'published-' + idea.id, points: d.rules.targetBonus,
+          requiresApproval: d.rules.approval, trackingMode: d.rules.mode, completed: false })
       }
     },
     async enrollChallenge(challengeId, customTarget) {
@@ -207,9 +205,8 @@ export function createTestRepository({
         (challenge.catalogId ?? challenge.id) === challengeId
         && (match?.frequency !== 'once' || challenge.status !== 'confirmed'))
       if (match && !alreadyActive) {
-        const profile = scoringProfileFor(match)
         const target = customTarget ?? match.target ?? 1
-        const points = profile === 'standard' ? match.points : scoringBreakdown(profile, target, match.points).total
+        const points = match.targetRewards?.[String(target)] ?? match.points
         const runIdentity = match.frequency === 'once'
           ? { id: `${match.id}-run-${++runSequence}`, catalogId: match.id }
           : { id: match.id }
@@ -219,9 +216,7 @@ export function createTestRepository({
     async upgradeChallengeTarget(challengeId, newTarget) {
       challenges = challenges.map((c) => {
         if (c.id === challengeId) {
-          const profile = scoringProfileFor(c)
-          const points = profile === 'standard' ? c.points : scoringBreakdown(profile, newTarget, c.points).total
-          return { ...c, target: newTarget, points, customTarget: newTarget }
+          return { ...c, pendingTarget: newTarget }
         }
         return c
       })
@@ -260,14 +255,6 @@ export function createTestRepository({
       }
       return completion
     },
-    async uncompleteChallenge(challengeId) {
-      const target = challenges.find((c) => c.id === challengeId)
-        ?? challenges.find((c) => c.catalogId === challengeId && c.status !== 'confirmed')
-      if (target) {
-        target.completed = false
-        target.status = undefined
-      }
-    },
     async recordChallengeProgress(challengeId, amount) {
       challenges = challenges.map((c) => {
         if (c.id === challengeId) {
@@ -279,7 +266,6 @@ export function createTestRepository({
         return c
       })
     },
-    async removeChallengeProgressEntry() {},
     async getPendingCompletions() {
       return pendingCompletions.filter((completion) => completion.status === 'pending')
     },
@@ -291,6 +277,7 @@ export function createTestRepository({
         if (challenge) {
           challenge.status = decision
           challenge.completed = decision === 'confirmed'
+          challenge.active = false
         }
       }
     },

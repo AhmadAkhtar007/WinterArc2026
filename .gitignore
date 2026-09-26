@@ -9,3 +9,4 @@ dist/
 .chrome-debug-profile*/
 *-debug.png
 supabase/.temp/
+.commandcode/

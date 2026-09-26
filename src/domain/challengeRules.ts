@@ -1,15 +1,9 @@
-import type { Challenge, ScoringProfile } from './types'
+import type { Challenge } from './types'
 
 export const SEASON_START = '2026-09-23'
 export const SEASON_DAYS = 100
 export const SEASON_TIMEZONE = 'Asia/Karachi'
 export const SEASON_KEY = '2026-season'
-
-export const WATER_STEP_ML = 250
-export const WATER_CEILING_ML = 4000
-export const PULLUP_TARGET_OPTIONS = [8, 20]
-
-type ScoredChallenge = Pick<Challenge, 'scoringProfile' | 'progress' | 'target' | 'points'>
 
 function karachiParts(now: Date): { year: number; month: number; day: number } {
   const formatted = new Intl.DateTimeFormat('en-CA', {
@@ -20,10 +14,6 @@ function karachiParts(now: Date): { year: number; month: number; day: number } {
   }).format(now)
   const [year, month, day] = formatted.split('-').map(Number)
   return { year, month, day }
-}
-
-export function scoringProfileFor(challenge: Pick<Challenge, 'scoringProfile'>): ScoringProfile {
-  return challenge.scoringProfile ?? 'standard'
 }
 
 export function localDayKey(now: Date = new Date()): string {
@@ -89,54 +79,3 @@ export function personalArcDayKey(startDate: string | Date, dayIndex: number): s
   return `${y}-${m}-${d}`
 }
 
-function pullupBasePoints(target: number): number {
-  return target >= 20 ? 12 : 5
-}
-
-export function scoringBreakdown(
-  profile: ScoringProfile,
-  target: number,
-  fallbackPoints = 0,
-): { base: number; bonus: number; total: number } {
-  if (profile === 'gym') {
-    const base = target * 10
-    return { base, bonus: 50, total: base + 50 }
-  }
-  if (profile === 'pushups') {
-    const base = Math.floor(target / 10)
-    return { base, bonus: 0, total: base }
-  }
-  if (profile === 'pullups') {
-    const base = pullupBasePoints(target)
-    return { base, bonus: 0, total: base }
-  }
-  if (profile === 'water') {
-    const base = Math.floor(target / WATER_STEP_ML)
-    return { base, bonus: 0, total: base }
-  }
-  return { base: fallbackPoints, bonus: 0, total: fallbackPoints }
-}
-
-export function progressCap(profile: ScoringProfile, target: number): number {
-  if (profile === 'pushups' || profile === 'pullups') return target * 2
-  if (profile === 'water') return WATER_CEILING_ML
-  return target
-}
-
-export function earnedPoints(challenge: ScoredChallenge): number {
-  const progress = challenge.progress ?? 0
-  const target = challenge.target ?? 1
-  const profile = scoringProfileFor(challenge)
-  if (progress <= target) return challenge.points
-  if (profile === 'pushups') return Math.floor(progress / 10)
-  if (profile === 'pullups') return Math.floor((Math.min(progress, target * 2) * pullupBasePoints(target)) / target)
-  if (profile === 'water') return Math.floor(Math.min(progress, WATER_CEILING_ML) / WATER_STEP_ML)
-  return challenge.points
-}
-
-export function maxPeriodPoints(profile: ScoringProfile, target: number, fallbackPoints = 0): number {
-  if (profile === 'pushups') return Math.floor((target * 2) / 10)
-  if (profile === 'pullups') return pullupBasePoints(target) * 2
-  if (profile === 'water') return Math.floor(WATER_CEILING_ML / WATER_STEP_ML)
-  return scoringBreakdown(profile, target, fallbackPoints).total
-}
