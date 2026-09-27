@@ -24,7 +24,7 @@ export function SeasonProofCard({ challenge, busy = false, feature = false, onTo
     (!!challenge.startsAt && new Date(challenge.startsAt).getTime() > Date.now())
 
   return (
-    <article className={`challenge-card season-proof-card ${feature ? 'challenge-card--feature' : ''} ${state === 'approved' ? 'is-complete' : ''} ${state === 'pending' ? 'is-pending' : ''} ${state === 'rejected' ? 'is-rejected' : ''}`}>
+    <article className={`challenge-card season-proof-card challenge-card--${challenge.category} ${feature ? 'challenge-card--feature' : ''} ${state === 'approved' ? 'is-complete' : ''} ${state === 'pending' ? 'is-pending' : ''} ${state === 'rejected' ? 'is-rejected' : ''}`}>
       <button type="button" className="complete-button season-proof-card__action" aria-label={actionLabel} aria-pressed={state === 'pending' || state === 'approved'} disabled={disabled} onClick={() => onToggle(challenge.id, true)}>
         <span aria-hidden="true">{state === 'pending' ? <Clock size={12} strokeWidth={2.25} /> : state === 'approved' ? <Check size={12} strokeWidth={2.5} /> : state === 'rejected' ? <X size={12} strokeWidth={2.5} /> : <Plus size={13} strokeWidth={2} />}</span>
       </button>

@@ -101,7 +101,7 @@ export function TrackedChallengeCard({
   return (
     <article
       ref={cardRef}
-      className={`challenge-card tracked-card ${terminal ? 'is-complete' : ''} ${locked ? 'is-locked' : ''} ${editing ? 'is-editing' : ''}`}
+      className={`challenge-card tracked-card challenge-card--${challenge.category} ${terminal ? 'is-complete' : ''} ${locked ? 'is-locked' : ''} ${editing ? 'is-editing' : ''}`}
       aria-disabled={locked || undefined}
       onClick={() => {
         if (!fixedStep && !editing && !disabled) setEditing(true)
