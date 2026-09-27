@@ -60,9 +60,28 @@ export function AppShell({ repository }: { repository: AppRepository }) {
   }
 
   async function commitSelection(customTargets?: Record<string, number>, directId?: string) {
+    const targets = directId ? [directId] : Array.from(selection)
+    if (!targets.length) return
+
+    const previousChallenges = challenges
+    const previousSelection = selection
+
+    const newlyCommitted = catalog
+      .filter((item) => targets.includes(item.id))
+      .map((item) => ({
+        ...item,
+        target: customTargets?.[item.id] ?? item.target ?? (item.rules?.initialTargets?.[0] ?? 1),
+        progress: 0,
+        active: true,
+        startsAt: new Date().toISOString(),
+      }))
+
+    setChallenges((curr) => [...curr, ...newlyCommitted])
+    setCommitMode(false)
+    setSelection(new Set())
     setBusyCommit(true)
     setError(null)
-    const targets = directId ? [directId] : Array.from(selection)
+
     const failed: string[] = []
     for (const challengeId of targets) {
       try {
@@ -73,9 +92,12 @@ export function AppShell({ repository }: { repository: AppRepository }) {
       }
     }
     await refresh()
-    setSelection(new Set(failed))
     setBusyCommit(false)
-    if (!failed.length) setCommitMode(false)
+    if (failed.length) {
+      setChallenges(previousChallenges)
+      setSelection(previousSelection)
+      setCommitMode(true)
+    }
   }
 
   async function handleUpgradeTarget(challengeId: string, newTarget: number) {
