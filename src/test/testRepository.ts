@@ -213,6 +213,7 @@ export function createTestRepository({
         challenges = [...challenges, { ...match, ...runIdentity, target, points, customTarget }]
       }
     },
+    async dismissAdvancement() {},
     async upgradeChallengeTarget(challengeId, newTarget) {
       challenges = challenges.map((c) => {
         if (c.id === challengeId) {

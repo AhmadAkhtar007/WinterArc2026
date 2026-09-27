@@ -15,6 +15,7 @@ interface PlayerRow {
   status: string; cooldown_ends_at?: string
 }
 interface Snapshot {
+  advancement_offers?: DashboardSnapshot['advancementOffers']
   profile: { id: string; player_code: string; display_name: string; created_at: string }
   seasons: Array<{ id: string; starts_on: string; ends_on: string }>
   catalog: CatalogRow[]; challenges: PlayerRow[]
@@ -95,6 +96,7 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
       return {
         profile: { id: s.profile.id, playerCode: s.profile.player_code, displayName: s.profile.display_name,
           initials: initials(s.profile.display_name), createdAt: s.profile.created_at, isAdmin: data.user.app_metadata?.role === 'admin' },
+        advancementOffers: s.advancement_offers ?? [],
         ...arc, points: me?.points ?? 0, rank: me?.rank ?? 0, streak, completedDays, stats: s.stats, legacyPoints: s.legacy_points,
         completionRate: s.daily_history.length ? Math.round(completed.size / s.daily_history.length * 100) : 0,
         nearestRival: me && me.rank > 1 ? leaderboard[me.rank - 2] : undefined,
@@ -105,12 +107,13 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
       if (!d) throw new Error('Challenge unavailable.')
       await mutate('arc_join', { challenge: challengeId, chosen_target: target ?? d.rules.initialTargets[0] })
     },
+    async dismissAdvancement(id, target) { await mutate('arc_dismiss_advancement', { commitment: id, offered_target: target }) },
     async upgradeChallengeTarget(id, target) { await mutate('arc_upgrade', { commitment: id, new_target: target }) },
     async recordChallengeProgress(id, amount, _period, requestId = crypto.randomUUID()) {
       await mutate('arc_record', { commitment: id, amount, request_id: requestId })
     },
-    async completeChallenge(id) {
-      await repository.recordChallengeProgress(id, 1, '')
+    async completeChallenge(id, _period, requestId) {
+      await repository.recordChallengeProgress(id, 1, '', requestId)
       const c = (await repository.getChallenges()).find((row) => row.id === id)!
       return { id: c.periodId!, challengeId: id, periodKey: localDayKey(), pointsAwarded: c.securedPoints ?? 0,
         status: c.status ?? 'confirmed', completedAt: new Date().toISOString() } as Completion

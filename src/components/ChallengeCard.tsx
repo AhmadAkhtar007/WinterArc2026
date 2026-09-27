@@ -9,12 +9,12 @@ export function ChallengeCard({ challenge, busy = false, onToggle, feature = fal
     : busy
       ? `Updating ${challenge.title}`
       : marked
-        ? `Mark ${challenge.title} incomplete`
+        ? `${challenge.title} complete`
         : `Complete ${challenge.title}`
 
   return (
     <article className={`challenge-card challenge-card--${challenge.category} ${feature ? 'challenge-card--feature' : ''} ${marked ? 'is-complete' : ''}`}>
-      <button type="button" className="complete-button" aria-label={actionLabel} aria-pressed={marked} disabled={busy} onClick={() => selection ? selection.onToggle() : onToggle?.(challenge.id, !marked)}>
+      <button type="button" className="complete-button" aria-label={actionLabel} aria-pressed={marked} disabled={busy || (!selection && (marked || challenge.active === false || (!!challenge.startsAt && new Date(challenge.startsAt).getTime() > Date.now())))} onClick={() => selection ? selection.onToggle() : onToggle?.(challenge.id, true)}>
         <span aria-hidden="true">{marked && <Check size={12} strokeWidth={2.5} />}</span>
       </button>
       <h3 className={!selection && marked ? 'challenge-card__title--complete' : ''}>{challenge.title}</h3>

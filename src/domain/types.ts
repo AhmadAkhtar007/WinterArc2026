@@ -74,7 +74,12 @@ export interface Completion {
 export interface LeaderboardEntry {
   id: string; rank: number; displayName: string; initials: string; points: number; completedCount: number; isCurrentPlayer: boolean
 }
+export interface AdvancementOffer {
+  commitmentId: string; title: string; unit: string; currentTarget: number
+  nextTarget: number; reward: number; maximumPenalty: number
+}
 export interface DashboardSnapshot {
+  advancementOffers?: AdvancementOffer[]
   profile: PlayerProfile
   dayNumber: number; totalDays: number; daysRemaining: number
   points: number; rank: number; streak: number; completionRate: number

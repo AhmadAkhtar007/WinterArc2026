@@ -124,18 +124,38 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .complete-button:not(:disabled):active { transform: scale(.94); }
 .challenge-card.is-complete .complete-button { border-color: var(--ice); background: var(--ice); color: var(--black); box-shadow: 0 3px 10px rgba(168,216,232,.12); }
 .complete-button:disabled { cursor: default; }
-.tracked-card { position: relative; min-height: 76px; grid-template-rows: auto auto; row-gap: 5px; }
+.tracked-card { position: relative; min-height: 76px; grid-template-rows: auto auto 3px; row-gap: 5px; cursor: pointer; }
 .tracked-card .tracked-card__action { grid-column: 1; grid-row: 1 / 4; align-self: center; }
 .tracked-card h3 { grid-column: 2; grid-row: 1; align-self: end; }
 .tracked-card > .points { grid-column: 3; grid-row: 1; align-self: end; }
+.tracked-card__timer { color: var(--ice-bright); font-variant-numeric: tabular-nums; letter-spacing: .08em; }
+.tracked-card__failed { color: var(--danger); letter-spacing: .08em; }
+.tracked-card__progress { grid-column: 2 / 4; grid-row: 2; color: var(--muted); font-size: 10px; line-height: 14px; }
+.tracked-card.is-editing { border-color: rgba(168,216,232,.28); background: #181b1d; box-shadow: inset 0 1px rgba(216,245,255,.05), 0 10px 30px rgba(0,0,0,.16); }
+.tracked-card__inline-entry { grid-column: 2 / 4; grid-row: 2; min-width: 0; display: flex; align-items: baseline; gap: 8px; color: var(--ice); }
+.tracked-card__inline-entry input { min-width: 0; width: 100%; border: 0; border-bottom: 1px solid rgba(168,216,232,.32); outline: 0; padding: 0 0 3px; background: transparent; color: var(--bone); font: 400 18px/20px var(--display); }
+.tracked-card__inline-entry input:focus { border-color: var(--ice-bright); }
+.tracked-card__inline-entry input::-webkit-inner-spin-button,
+.tracked-card__inline-entry input::-webkit-outer-spin-button { margin: 0; appearance: none; }
+.tracked-card__inline-entry input[type='number'] { appearance: textfield; }
+.tracked-card__inline-entry strong { flex: 0 0 auto; color: var(--muted); font-size: 10px; font-weight: 500; text-transform: lowercase; }
+.tracked-card__meter { grid-column: 2 / 4; grid-row: 3; display: block; height: 3px; overflow: hidden; border-radius: 999px; background: #22282c; }
+.tracked-card__meter i { display: block; height: 100%; border-radius: inherit; background: var(--ice); transition: width .35s var(--ease-heavy); }
 .tracked-card.is-complete .tracked-card__action { border-color: var(--ice); background: var(--ice); color: var(--black); box-shadow: 0 3px 10px rgba(168,216,232,.12); }
 .tracked-card.is-locked { cursor: default; }
+.season-proof-card { min-height: 76px; grid-template-rows: auto auto; row-gap: 3px; }
+.season-proof-card .season-proof-card__action { grid-column: 1; grid-row: 1 / 3; align-self: center; }
+.season-proof-card h3 { grid-column: 2; grid-row: 1; align-self: end; }
+.season-proof-card > .points { grid-column: 3; grid-row: 1; align-self: end; }
+.season-proof-card__instruction { grid-column: 2 / 4; grid-row: 2; color: var(--ice); font-size: 10px; line-height: 14px; }
 .challenge-card.is-pending { border-color: rgba(239,123,69,.16); }
 .challenge-card.is-pending .complete-button { border-color: rgba(239,123,69,.4); color: var(--ember); }
 .challenge-card.is-pending .points { color: var(--ember); }
 .challenge-card.is-rejected { border-color: rgba(224,101,101,.16); }
 .challenge-card.is-rejected .complete-button { border-color: rgba(224,101,101,.4); color: var(--danger); }
 .challenge-card.is-rejected .points { color: var(--muted); }
+.season-proof-card.is-pending .season-proof-card__instruction { color: var(--ember); }
+.season-proof-card.is-rejected .season-proof-card__instruction { color: var(--danger); }
 .modal-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 24px; background: rgba(2,3,4,.74); backdrop-filter: blur(8px); }
 .modal { width: min(100%, 420px); max-height: min(80dvh, 640px); overflow-y: auto; display: grid; gap: 20px; border: 1px solid rgba(168,216,232,.14); border-radius: 24px; padding: 24px; background: #0d1012; box-shadow: 0 30px 80px rgba(0,0,0,.6); outline: none; }
 .modal h2 { margin: 0; color: var(--bone); font: 400 25px/1.15 var(--display); }
@@ -342,12 +362,21 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
 
 /* Shared challenge configuration and progress controls. */
-.tracked-card__detail { grid-column: 2 / -1; font-size: .8rem; }
-.tracked-card__detail p { margin: .4rem 0; }
-.tracked-card__detail input { width: 8rem; }
 .challenge-editor { display: grid; gap: .85rem; }
 .challenge-editor label, .rule-field { display: grid; gap: .3rem; }
 .challenge-editor input, .challenge-editor select, .challenge-editor textarea, .rule-field select { max-width: 100%; padding: .55rem; }
 .challenge-editor input[type=checkbox] { width: auto; }
 .rule-row { display: flex; align-items: end; gap: .5rem; margin: .5rem 0; }
 .rule-row input { width: 7rem; }
+
+.tracked-card__error { grid-column: 2 / 4; grid-row: 4; color: var(--danger); font-size: 10px; line-height: 14px; }
+
+.advancement-notice { position: fixed; top: max(18px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 29; width: min(calc(100% - 36px), 380px); min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 18px; border: 1px solid rgba(168,216,232,.2); border-radius: 16px; background: rgba(21,25,28,.97); box-shadow: 0 8px 30px rgba(0,0,0,.24); color: var(--ice); text-align: left; cursor: pointer; }
+.advancement-notice span { display: grid; gap: 3px; }
+.advancement-notice strong { font-size: 12px; font-weight: 500; }
+.advancement-notice small { color: var(--muted); font-size: 10px; }
+.advancement-backdrop { align-items: end; }
+.advancement-sheet { margin-inline: auto; }
+.advancement-target { margin: 0; color: var(--bone); font: 400 30px/1.2 var(--display); }
+.advancement-target span { color: var(--ice); padding-inline: 10px; }
+.advancement-target small { color: var(--muted); font: 400 12px var(--body); }

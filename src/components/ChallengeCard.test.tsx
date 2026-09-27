@@ -28,7 +28,7 @@ describe('ChallengeCard', () => {
     expect(screen.queryByText('Mark complete')).not.toBeInTheDocument()
   })
 
-  it('toggles completion from the circular control in both directions', () => {
+  it('records once and keeps completed entries irreversible', () => {
     const onToggle = vi.fn()
     const { rerender } = render(<ChallengeCard challenge={challenge} onToggle={onToggle} />)
 
@@ -36,10 +36,10 @@ describe('ChallengeCard', () => {
     expect(onToggle).toHaveBeenLastCalledWith(challenge.id, true)
 
     rerender(<ChallengeCard challenge={{ ...challenge, completed: true, status: 'confirmed' }} onToggle={onToggle} />)
-    const completedButton = screen.getByRole('button', { name: `Mark ${challenge.title} incomplete` })
-    expect(completedButton).toBeEnabled()
+    const completedButton = screen.getByRole('button', { name: `${challenge.title} complete` })
+    expect(completedButton).toBeDisabled()
     fireEvent.click(completedButton)
-    expect(onToggle).toHaveBeenLastCalledWith(challenge.id, false)
+    expect(onToggle).toHaveBeenCalledTimes(1)
     expect(completedButton.querySelector('svg')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: challenge.title })).toHaveClass('challenge-card__title--complete')
   })

@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import type { Challenge, ChallengeFrequency } from '../domain/types'
 import { ChallengeCard } from '../components/ChallengeCard'
+import { SeasonProofCard } from '../components/SeasonProofCard'
 import { TrackedChallengeCard } from '../components/TrackedChallengeCard'
 import { ChallengeIdeaForm } from '../components/ChallengeIdeaForm'
 
 export function ChallengesPage({ challenges, catalog, committedIds, commitMode, selection, busyChallenge, busyCommit,
-  onToggle, onRecord, onRefresh, onToggleCommitMode, onToggleSelection, onConfirmCommit, onUpgradeTarget, onSubmitIdea }: {
+  onToggle, onRecord, onRefresh, onToggleCommitMode, onToggleSelection, onConfirmCommit, onSubmitIdea }: {
   challenges: Challenge[]; catalog: Challenge[]; committedIds: Set<string>; commitMode: boolean; selection: Set<string>
   busyChallenge: string | null; busyCommit: boolean
   onToggle: (id: string, completed: boolean) => void
@@ -43,17 +44,12 @@ export function ChallengesPage({ challenges, catalog, committedIds, commitMode, 
     )}
     <div className="challenge-grid">{visible.map((c) => commitMode
       ? <ChallengeCard key={c.id} challenge={{ ...c, pointsLabel: c.rules && c.rules.initialTargets.length > 1 ? 'Choose baseline' : c.pointsLabel }}
-          selection={{ selected: selection.has(c.id), onToggle: () => onToggleSelection(c.id) }} />
-      : (c.trackingMode ?? 'binary') !== 'binary'
-        ? <TrackedChallengeCard key={c.id} challenge={c} busy={busyChallenge === c.id} onRecord={onRecord} onCooldownEnd={onRefresh} onUpgradeTarget={onUpgradeTarget} />
-        : <article key={c.id} className="challenge-card">
-            <button className="complete-button" disabled={busyChallenge === c.id || c.completed || c.active === false || (!!c.startsAt && new Date(c.startsAt).getTime() > Date.now())}
-              aria-label={c.requiresApproval ? `Submit ${c.title} for review` : `Complete ${c.title}`} onClick={() => onToggle(c.id, true)}><Plus size={14} /></button>
-            <h3>{c.title}</h3><span className="points">+{c.points} XP</span>
-            <small>{c.status === 'pending' ? 'Awaiting proof review' : c.status === 'reversed' ? 'Rejected · start another attempt'
-              : c.completed ? 'Completed · add again for another attempt' : c.startsAt && new Date(c.startsAt).getTime() > Date.now()
-                ? `Starts ${new Date(c.startsAt).toLocaleString()}` : c.requiresApproval ? 'Submit proof in WhatsApp, then request review' : ''}</small>
-          </article>)}</div>
+          feature={c.frequency === 'once'} selection={{ selected: selection.has(c.id), onToggle: () => onToggleSelection(c.id) }} />
+      : c.requiresApproval
+        ? <SeasonProofCard key={c.id} challenge={c} feature={c.frequency === 'once'} busy={busyChallenge === c.id} onToggle={onToggle} />
+        : (c.trackingMode ?? 'binary') !== 'binary'
+          ? <TrackedChallengeCard key={c.id} challenge={c} busy={busyChallenge === c.id} onRecord={onRecord} onCooldownEnd={onRefresh} />
+          : <ChallengeCard key={c.id} challenge={c} feature={c.frequency === 'once'} busy={busyChallenge === c.id} onToggle={onToggle} />)}</div>
     {!visible.length && <p className="commit-empty">{commitMode ? 'Nothing left to add here.' : 'Add a challenge to begin.'}</p>}
     {commitMode && (
       <div className="commit-suggest">

@@ -5,6 +5,7 @@ import type { Challenge, DashboardSnapshot, LeaderboardEntry } from '../domain/t
 import { localDayKey, periodKeyFor } from '../domain/challengeRules'
 import { BrandMark } from '../components/BrandMark'
 import { BottomNavigation } from '../components/BottomNavigation'
+import { AdvancementNotice } from '../components/AdvancementNotice'
 import { ChallengesPage } from '../pages/ChallengesPage'
 import { LeaderboardPage } from '../pages/LeaderboardPage'
 import { ProfilePage } from '../pages/ProfilePage'
@@ -22,6 +23,8 @@ export function AppShell({ repository }: { repository: AppRepository }) {
   const [commitMode, setCommitMode] = useState(false)
   const [selection, setSelection] = useState<Set<string>>(new Set())
   const [busyCommit, setBusyCommit] = useState(false)
+  const completionRequests = useRef(new Map<string, string>())
+  const completing = useRef(new Set<string>())
   const refreshVersion = useRef(0)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [busyChallenge, setBusyChallenge] = useState<string | null>(null)
@@ -129,20 +132,25 @@ export function AppShell({ repository }: { repository: AppRepository }) {
   async function toggleChallenge(challengeId: string, completed: boolean) {
     const previousChallenges = challenges
     const challenge = previousChallenges.find((item) => item.id === challengeId)
+    if (completing.current.has(challengeId)) return
     if (!completed || !challenge || (challenge.trackingMode ?? 'binary') !== 'binary') return
 
+    completing.current.add(challengeId)
+    if (!completionRequests.current.has(challengeId)) completionRequests.current.set(challengeId, crypto.randomUUID())
     setChallenges((currentChallenges) => currentChallenges.map((item) => item.id === challengeId
       ? { ...item, completed, status: completed && item.requiresApproval ? 'pending' : completed ? 'confirmed' : undefined }
       : item))
     setBusyChallenge(challengeId)
     setError(null)
     try {
-      await repository.completeChallenge(challengeId, localDayKey())
+      await repository.completeChallenge(challengeId, localDayKey(), completionRequests.current.get(challengeId))
+      completionRequests.current.delete(challengeId)
       void refresh()
     } catch (completionError) {
       setChallenges(previousChallenges)
       setError(completionError instanceof Error ? completionError.message : 'Completion could not be updated.')
     } finally {
+      completing.current.delete(challengeId)
       setBusyChallenge(null)
     }
   }
@@ -183,8 +191,10 @@ export function AppShell({ repository }: { repository: AppRepository }) {
         {dashboard.profile.isAdmin && <div className="topbar__actions"><button className="admin-switch" type="button" onClick={() => setRoute('admin')}>Command</button></div>}
       </header>
       {error && <button className="error-banner" type="button" onClick={() => setError(null)}>{error}<X aria-hidden="true" size={18} /></button>}
+      <AdvancementNotice offers={dashboard.advancementOffers ?? []} onAdvance={handleUpgradeTarget}
+        onDismiss={async (id, target) => { await repository.dismissAdvancement(id, target); await refresh() }} />
       <main className="page-stage" key={route}>
-        {route === 'challenges' && <ChallengesPage challenges={challenges} catalog={catalog} committedIds={committedIds} commitMode={commitMode} selection={selection} busyChallenge={busyChallenge} busyCommit={busyCommit} onToggle={toggleChallenge} onRecord={recordChallengeProgress} onRefresh={() => { void refresh() }} onToggleCommitMode={toggleCommitMode} onToggleSelection={toggleSelection} onConfirmCommit={(customTargets, directId) => { void commitSelection(customTargets, directId) }} onUpgradeTarget={handleUpgradeTarget} onSubmitIdea={(title, description) => repository.submitChallengeIdea(title, description)} />}
+        {route === 'challenges' && <ChallengesPage challenges={challenges} catalog={catalog} committedIds={committedIds} commitMode={commitMode} selection={selection} busyChallenge={busyChallenge} busyCommit={busyCommit} onToggle={toggleChallenge} onRecord={recordChallengeProgress} onRefresh={() => { void refresh() }} onToggleCommitMode={toggleCommitMode} onToggleSelection={toggleSelection} onConfirmCommit={(customTargets, directId) => { void commitSelection(customTargets, directId) }} onSubmitIdea={(title, description) => repository.submitChallengeIdea(title, description)} />}
         {route === 'leaderboard' && <LeaderboardPage entries={leaderboard} />}
         {route === 'profile' && (
           <ProfilePage
