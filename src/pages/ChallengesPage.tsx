@@ -56,7 +56,7 @@ export function ChallengesPage({ challenges, catalog, committedIds, commitMode, 
           {c.rules!.initialTargets.map((t) => <option key={t} value={t}>{t} {c.rules!.unit} · {c.targetRewards?.[String(t)] ?? 0} XP</option>)}</select>}
         {c.frequency === 'once' && c.rules?.durationMinutes ? <small>Adding starts the {c.rules.durationMinutes / 60}-hour countdown.</small> : null}
       </label>)}
-      <p>Daily and weekly commitments start next period in Karachi time. Missing a target deducts XP in proportion to the shortfall. Commitments cannot be removed.</p>
+      <p>This action is irreversible. You cannot unselect a challenge after committing to it. Missing a target deducts XP in proportion to the shortfall.</p>
       <button className="primary-button" disabled={busyCommit} onClick={() => { onConfirmCommit(targets); setConfirming(false) }}>Commit</button>
       <button className="text-button" onClick={() => setConfirming(false)}>Cancel</button>
     </div></div>}
