@@ -29,11 +29,18 @@ export function ChallengesPage({ challenges, catalog, committedIds, commitMode, 
     {submitted && <button className="success-banner" onClick={() => setSubmitted(false)}>Idea submitted for review.<X size={16} /></button>}
     <div className="filter-row" aria-label="Challenge filters">{(['daily', 'weekly', 'once'] as const).map((f) =>
       <button key={f} className={filter === f ? 'is-active' : ''} onClick={() => setFilter(f)}>{f === 'once' ? 'Season' : f === 'daily' ? 'Daily' : 'Weekly'}</button>)}</div>
-    <div className="challenge-actions">
-      <button className="add-challenge-button" onClick={() => { setConfirming(false); onToggleCommitMode() }}><Plus size={16} />{commitMode ? 'Cancel' : 'Add challenge'}</button>
-      {commitMode ? <button className="primary-button" disabled={!selection.size} onClick={() => setConfirming(true)}>Confirm {selection.size || ''}</button>
-        : <button className="text-button" onClick={() => setSuggesting(true)}>Suggest a challenge</button>}
-    </div>
+    {commitMode ? (
+      <div className="commit-block">
+        <div className="commit-actions">
+          <button className="secondary-button" type="button" onClick={() => { setConfirming(false); onToggleCommitMode() }}>Cancel</button>
+          <button className="primary-button" type="button" disabled={!selection.size} onClick={() => setConfirming(true)}>Confirm {selection.size || ''}</button>
+        </div>
+      </div>
+    ) : (
+      <button className="add-challenge-button" type="button" onClick={() => { setConfirming(false); onToggleCommitMode() }}>
+        <Plus size={16} /> Add challenge
+      </button>
+    )}
     <div className="challenge-grid">{visible.map((c) => commitMode
       ? <ChallengeCard key={c.id} challenge={{ ...c, pointsLabel: c.rules && c.rules.initialTargets.length > 1 ? 'Choose baseline' : c.pointsLabel }}
           selection={{ selected: selection.has(c.id), onToggle: () => onToggleSelection(c.id) }} />
@@ -47,7 +54,13 @@ export function ChallengesPage({ challenges, catalog, committedIds, commitMode, 
               : c.completed ? 'Completed · add again for another attempt' : c.startsAt && new Date(c.startsAt).getTime() > Date.now()
                 ? `Starts ${new Date(c.startsAt).toLocaleString()}` : c.requiresApproval ? 'Submit proof in WhatsApp, then request review' : ''}</small>
           </article>)}</div>
-    {!visible.length && <p className="commit-empty">{commitMode ? 'Nothing left to add here.' : 'Add a challenge to begin.'}</p>}
+    {!visible.length && <p className="commit-empty">{commitMode ? 'Nothing left to add here.' : 'Add a challenge to begin.'}</p>}
+    {commitMode && (
+      <div className="commit-suggest">
+        <span>Don't see your challenge?</span>
+        <button type="button" className="text-button" onClick={() => setSuggesting(true)}>Suggest a challenge</button>
+      </div>
+    )}
     {confirming && commitMode && <div className="modal-backdrop"><div className="modal" role="dialog" aria-modal="true" aria-labelledby="commit-title">
       <h2 id="commit-title">Your commitments</h2>
       {chosen.map((c) => <label key={c.id} className="rule-field"><span>{c.title}</span>

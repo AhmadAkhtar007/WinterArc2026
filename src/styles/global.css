@@ -72,6 +72,8 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .commit-actions .primary-button:disabled { opacity: .4; cursor: default; }
 .commit-note { margin: 0; max-width: 330px; color: var(--muted); font-size: 11px; line-height: 15px; }
 .commit-empty { margin: 0; padding: 24px 0; color: var(--muted); font-size: 12px; text-align: center; }
+.commit-suggest { justify-self: center; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); padding: 12px 0 24px; }
+.commit-suggest .text-button { color: var(--ice); text-decoration: underline; background: transparent; border: none; cursor: pointer; font-size: 11px; }
 .loading-screen { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 20px; background: radial-gradient(circle, #101b20, var(--black) 44%); }
 .loading-screen p { color: var(--silver); letter-spacing: .12em; text-transform: uppercase; font-size: 11px; }
 .loading-line { width: 160px; height: 2px; background: #222; overflow: hidden; }
