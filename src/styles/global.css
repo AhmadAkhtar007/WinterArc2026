@@ -116,7 +116,7 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .challenge-card::after { content: ''; position: absolute; inset: auto -15px -25px 30%; height: 75px; border-radius: 50%; background: var(--card-glow); opacity: .12; filter: blur(22px); pointer-events: none; }
 .challenge-card--body { --card-glow: #9d1724; }
 .challenge-card--mind { --card-glow: #b98616; }
-.challenge-card--soul { --card-glow: #bfc3c6; }
+.challenge-card--soul { --card-glow: #487d95; }
 .challenge-card--craft { --card-glow: #1f7a42; }
 .challenge-card h3 { min-width: 0; margin: 0; overflow: hidden; color: #aaa7a8; font: 400 12px/16px var(--body); letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
 .challenge-card__title--complete { color: #747174 !important; text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: #747174; }
@@ -219,8 +219,8 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .dimension-card::after { content: ''; position: absolute; inset: auto -24px -48px 24%; height: 90px; border-radius: 50%; background: var(--dimension-color); opacity: .045; filter: blur(28px); pointer-events: none; }
 .dimension-card--body { --dimension-color: #9d1724; --dimension-end: #ed3e4f; }
 .dimension-card--mind { --dimension-color: #b98616; --dimension-end: #f4d267; }
-.dimension-card--soul { --dimension-color: #bfc3c6; --dimension-end: #f8f7f2; }
-.dimension-card--craft { --dimension-color: #487d95; --dimension-end: #9cd7ec; }
+.dimension-card--soul { --dimension-color: #487d95; --dimension-end: #9cd7ec; }
+.dimension-card--craft { --dimension-color: #1f7a42; --dimension-end: #3ecf8e; }
 .dimension-card h3 { margin: 0; color: #dedbd5; font: italic 400 22px/1 var(--display); letter-spacing: -.025em; }
 .dimension-card strong { margin-top: 22px; color: var(--dimension-end); font: 400 24px/1 var(--body); letter-spacing: -.035em; }
 .dimension-meter { position: relative; overflow: hidden; height: 9px; margin-top: 13px; border: 1px solid rgba(255,255,255,.035); border-radius: 999px; background: rgba(255,255,255,.035); }
