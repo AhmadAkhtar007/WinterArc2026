@@ -113,11 +113,11 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .section-heading > span { color: var(--silver); font: 400 18px var(--display); }
 .challenge-grid { display: grid; gap: 10px; padding-inline: 9px; }
 .challenge-card { position: relative; --card-glow: transparent; min-height: 60px; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.022); border-radius: 16px; padding: 10px 14px; background: #151516; box-shadow: inset 0 1px rgba(255,255,255,.015); transition: border-color .35s ease, background .35s ease; }
-.challenge-card::after { content: ''; position: absolute; inset: auto -15px -25px 30%; height: 75px; border-radius: 50%; background: var(--card-glow); opacity: .12; filter: blur(22px); pointer-events: none; }
-.challenge-card--body { --card-glow: #9d1724; }
-.challenge-card--mind { --card-glow: #b98616; }
-.challenge-card--soul { --card-glow: #487d95; }
-.challenge-card--craft { --card-glow: #1f7a42; }
+.challenge-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at 82% 115%, var(--card-glow) 0%, transparent 68%); opacity: .28; pointer-events: none; }
+.challenge-card--body { --card-glow: #ed3e4f; }
+.challenge-card--mind { --card-glow: #f4d267; }
+.challenge-card--soul { --card-glow: #9cd7ec; }
+.challenge-card--craft { --card-glow: #3ecf8e; }
 .challenge-card h3 { min-width: 0; margin: 0; overflow: hidden; color: #aaa7a8; font: 400 12px/16px var(--body); letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
 .challenge-card__title--complete { color: #747174 !important; text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: #747174; }
 .meter { height: 3px; margin-top: 9px; border-radius: 9px; overflow: hidden; background: #22282c; }
@@ -216,7 +216,7 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .dimension-section { width: min(100%, 760px); margin-inline: auto; }
 .dimension-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .dimension-card { --dimension-color: #dfe3e5; --dimension-end: #fff; position: relative; overflow: hidden; min-height: 138px; display: grid; align-content: start; border: 1px solid rgba(255,255,255,.055); border-radius: 19px; padding: 18px 16px 17px; background: #111213; }
-.dimension-card::after { content: ''; position: absolute; inset: auto -24px -48px 24%; height: 90px; border-radius: 50%; background: var(--dimension-color); opacity: .045; filter: blur(28px); pointer-events: none; }
+.dimension-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at 82% 115%, var(--dimension-end) 0%, transparent 68%); opacity: .28; pointer-events: none; }
 .dimension-card--body { --dimension-color: #9d1724; --dimension-end: #ed3e4f; }
 .dimension-card--mind { --dimension-color: #b98616; --dimension-end: #f4d267; }
 .dimension-card--soul { --dimension-color: #487d95; --dimension-end: #9cd7ec; }
