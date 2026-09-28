@@ -6,7 +6,7 @@ body { margin: 0; min-width: 320px; min-height: 100dvh; background: var(--black)
 button, input, select, textarea { font: inherit; }
 button { color: inherit; }
 button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px; }
-.app-frame { min-height: 100dvh; overflow: hidden; padding: 0 16px calc(96px + var(--safe-bottom)); background: radial-gradient(circle at 68% -10%, rgba(78,121,139,.18), transparent 32rem), var(--black); }
+.app-frame { min-height: 100dvh; overflow: hidden; padding: 0 16px calc(96px + var(--safe-bottom)); background: radial-gradient(circle at 68% -10%, rgba(205,212,218,.08), transparent 32rem), var(--black); }
 .grain { position: fixed; inset: 0; z-index: 20; pointer-events: none; opacity: .035; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E"); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%); white-space: nowrap; }
 .intro-page { position: relative; isolation: isolate; height: 100dvh; min-height: 560px; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: radial-gradient(circle at 50% 24%, rgba(168,216,232,.06), transparent 26rem), #050607; }
