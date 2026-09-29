@@ -1,6 +1,5 @@
 import type { Challenge } from './types'
 
-export const SEASON_START = '2026-09-23'
 export const SEASON_DAYS = 100
 export const SEASON_TIMEZONE = 'Asia/Karachi'
 export const SEASON_KEY = '2026-season'
@@ -38,14 +37,6 @@ export function periodKeyFor(challenge: Pick<Challenge, 'frequency'>, now: Date 
   return localDayKey(now)
 }
 
-export function seasonDay(now: Date = new Date()): number {
-  const [year, month, day] = localDayKey(now).split('-').map(Number)
-  const today = Date.UTC(year, month - 1, day)
-  const [startYear, startMonth, startDay] = SEASON_START.split('-').map(Number)
-  const start = Date.UTC(startYear, startMonth - 1, startDay)
-  const dayNumber = Math.floor((today - start) / 86_400_000) + 1
-  return Math.max(0, Math.min(SEASON_DAYS, dayNumber))
-}
 
 export function personalArcDay(startDate: string | Date, now: Date = new Date()): {
   dayNumber: number

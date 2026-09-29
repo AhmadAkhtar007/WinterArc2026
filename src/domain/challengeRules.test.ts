@@ -4,7 +4,6 @@ import {
   periodKeyFor,
   personalArcDay,
   personalArcDayKey,
-  seasonDay,
   weeklyKey,
 } from './challengeRules'
 
@@ -26,12 +25,6 @@ describe('challengeRules', () => {
     expect(periodKeyFor({ frequency: 'daily' }, now)).toBe('2026-09-24')
     expect(periodKeyFor({ frequency: 'weekly' }, now)).toBe('2026-W39')
     expect(periodKeyFor({ frequency: 'once' }, now)).toBe('2026-season')
-  })
-
-  it('counts season days from the season start and clamps to the season length', () => {
-    expect(seasonDay(new Date('2026-09-22T12:00:00Z'))).toBe(0)
-    expect(seasonDay(new Date('2026-09-23T12:00:00Z'))).toBe(1)
-    expect(seasonDay(new Date('2026-12-31T12:00:00Z'))).toBe(100)
   })
 
   it('calculates personal evergreen arc day numbers from registration date', () => {

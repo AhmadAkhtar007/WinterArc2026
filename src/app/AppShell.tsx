@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import type { AppRepository } from '../data/appRepository'
 import type { Challenge, DashboardSnapshot, LeaderboardEntry } from '../domain/types'
 import { localDayKey, periodKeyFor } from '../domain/challengeRules'

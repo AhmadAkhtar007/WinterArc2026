@@ -223,8 +223,6 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
 .dimension-card--craft { --dimension-color: #1f7a42; --dimension-end: #3ecf8e; }
 .dimension-card h3 { margin: 0; color: #dedbd5; font: italic 400 22px/1 var(--display); letter-spacing: -.025em; }
 .dimension-card strong { margin-top: 22px; color: var(--dimension-end); font: 400 24px/1 var(--body); letter-spacing: -.035em; }
-.dimension-meter { position: relative; overflow: hidden; height: 9px; margin-top: 13px; border: 1px solid rgba(255,255,255,.035); border-radius: 999px; background: rgba(255,255,255,.035); }
-.dimension-meter span { display: block; width: 100%; height: 100%; border-radius: inherit; transform-origin: left; background: linear-gradient(90deg, var(--dimension-color), var(--dimension-end)); box-shadow: 0 0 12px color-mix(in srgb, var(--dimension-color) 30%, transparent); }
 .consistency-card { display: grid; gap: 16px; padding: 16px; border-radius: 18px; background: #0b0e10; border: 1px solid rgba(255,255,255,.07); }
 .account-settings { display: grid; gap: 16px; width: min(100%, 760px); margin-inline: auto; padding: 16px; border: 1px solid rgba(255,255,255,.07); border-radius: 18px; background: #0b0e10; }
 .account-settings__grid { display: grid; gap: 24px; }
@@ -293,7 +291,6 @@ button:focus-visible { outline: 2px solid var(--ice-bright); outline-offset: 3px
   .dimension-card { min-height: 170px; padding: 24px 22px 22px; }
   .dimension-card h3 { font-size: 26px; }
   .dimension-card strong { margin-top: 28px; font-size: 28px; }
-  .dimension-meter { height: 11px; margin-top: 16px; }
   .consistency-card, .account-settings { gap: 30px; padding: 32px; }
   .account-settings__grid { gap: 24px; }
   .account-settings form { gap: 13px; }

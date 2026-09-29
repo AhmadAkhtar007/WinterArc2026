@@ -24,7 +24,6 @@ export interface ChallengeRules {
   approval: boolean
   penalty: 'baseline' | 'none'
 }
-export interface ProgressEntry { id: string; amount: number; recordedAt: string }
 export interface PlayerProfile {
   id: string; playerCode: string; displayName: string; initials: string; isAdmin: boolean; createdAt?: string
 }
@@ -47,24 +46,18 @@ export interface Challenge {
   periodId?: string
   targetRewards?: Record<string, number>
   maxProgress?: number
-  metric?: string
   progress?: number
   target?: number
   completed: boolean
   status?: CompletionStatus
   trackingMode?: ChallengeTrackingMode
   unitLabel?: string
-  entryOptions?: number[]
   entryStep?: number
-  burstLimit?: number
-  minimumIntervalMinutes?: number
   attemptDurationMinutes?: number
-  rewardTiers?: RewardTier[]
   securedPoints?: number
   cooldownEndsAt?: string
   attemptEndsAt?: string
   attemptFailed?: boolean
-  progressEntries?: ProgressEntry[]
   customTarget?: number
   pointsLabel?: string
 }
@@ -99,7 +92,4 @@ export interface ChallengeDefinition {
 export interface ChallengeIdeaReview {
   decision: 'approved' | 'rejected'
   definition?: ChallengeDefinition
-  frequency?: ChallengeFrequency
-  points?: number
-  requiresApproval?: boolean
 }

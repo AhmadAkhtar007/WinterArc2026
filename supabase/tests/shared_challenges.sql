@@ -38,7 +38,7 @@ do $$ declare r jsonb; begin
 end $$;
 
 select public.arc_join('20260000-0000-4000-8000-000000000002',100);
-select pg_temp.assert_true((select starts_at>now() from public.arc_commitments where user_id=auth.uid()),'recurring starts next day');
+select pg_temp.assert_true((select starts_at<=now() from public.arc_commitments where user_id=auth.uid()),'recurring starts immediately');
 -- Simulate the start of the committed period without changing application clock logic.
 update public.arc_commitments set starts_at=date_trunc('day',now() at time zone 'Asia/Karachi') at time zone 'Asia/Karachi',
  next_period_at=date_trunc('day',now() at time zone 'Asia/Karachi') at time zone 'Asia/Karachi' where user_id=auth.uid();

@@ -14,7 +14,7 @@ export function ChallengesPage({ challenges, catalog, committedIds, commitMode, 
   onRecord: (id: string, amount: number, requestId?: string) => Promise<void>
   onRefresh: () => void; onToggleCommitMode: () => void; onToggleSelection: (id: string) => void
   onConfirmCommit: (customTargets?: Record<string, number>, directId?: string) => void
-  onUpgradeTarget?: (id: string, target: number) => Promise<void>
+
   onSubmitIdea: (title: string, description: string) => Promise<void>
 }) {
   const [filter, setFilter] = useState<ChallengeFrequency>('daily')

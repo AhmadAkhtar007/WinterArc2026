@@ -11,7 +11,6 @@ const challenge: Challenge = {
   points: 10,
   requiresApproval: false,
   category: 'soul',
-  metric: 'daily',
   completed: false,
 }
 

@@ -77,7 +77,7 @@ export function usePwaInstall() {
   return {
     standalone,
     canShowBanner,
-    canInstall: !standalone,
+
     isIos,
     showIosModal,
     setShowIosModal,
