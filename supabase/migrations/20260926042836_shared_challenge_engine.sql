@@ -18,6 +18,9 @@ create table public.arc_commitments (
  rules jsonb not null, category text not null, frequency text not null, title text not null,
  starts_at timestamptz not null, ends_at timestamptz not null, next_period_at timestamptz not null,
  pending_target integer check(pending_target>0), pending_at timestamptz,
+ qualification_started_at timestamptz not null default now(),
+ offered_target integer,
+ offer_dismissed_until timestamptz,
  active boolean not null default true, created_at timestamptz not null default now(),
  check(ends_at > starts_at)
 );
@@ -180,7 +183,8 @@ begin
  end loop;
 end $$;
 
-create function private.arc_join(challenge uuid,chosen_target integer) returns void language plpgsql security definer set search_path='' as $$
+-- Start daily and weekly commitments immediately on the current calendar period.
+create or replace function private.arc_join(challenge uuid,chosen_target integer) returns void language plpgsql security definer set search_path='' as $$
 declare d public.arc_challenges; s public.arc_seasons; begins timestamptz; ends timestamptz;
 begin
  if auth.uid() is null then raise exception 'Sign in required'; end if;
@@ -191,7 +195,7 @@ begin
  select * into s from public.arc_seasons where id=d.season_id;
  if not (d.rules->'initialTargets' @> jsonb_build_array(chosen_target)) then raise exception 'Choose an allowed baseline'; end if;
  begins:=case when d.frequency='once' then greatest(now(),s.starts_on::timestamp at time zone s.timezone)
- else greatest(private.arc_boundary(d.frequency,now()),s.starts_on::timestamp at time zone s.timezone) end;
+ else greatest(date_trunc(case when d.frequency='weekly' then 'week' else 'day' end, now() at time zone s.timezone) at time zone s.timezone, s.starts_on::timestamp at time zone s.timezone) end;
  ends:=(s.ends_on+1)::timestamp at time zone s.timezone;
  if begins>=ends then raise exception 'No full period remains in this season'; end if;
  if d.frequency<>'once' and private.arc_boundary(d.frequency,begins)>ends then raise exception 'No full period remains in this season'; end if;
@@ -202,20 +206,75 @@ begin
  perform private.arc_maintain(auth.uid());
 end $$;
 
-create function private.arc_upgrade(commitment uuid,new_target integer) returns void language plpgsql security definer set search_path='' as $$
-declare c public.arc_commitments; effective timestamptz;
+-- Earn the next configured level through fourteen complete days / two complete weeks.
+create or replace function private.arc_advancement_offers(owner_id uuid) returns jsonb
+language plpgsql security invoker set search_path='' as $$
+declare c public.arc_commitments; next_target integer; boundary timestamptz; cadence interval; required integer;
+begin
+ for c in select * from public.arc_commitments where user_id=owner_id and active and frequency<>'once'
+ and starts_at<=now() and ends_at>now() order by id for update loop
+  if c.offered_target is not null or c.pending_target is not null or c.offer_dismissed_until>now() then continue; end if;
+  select min(value::text::int) into next_target from jsonb_array_elements(c.rules->'targets') where value::text::int>c.target;
+  if next_target is null then continue; end if;
+  required:=case when c.frequency='weekly' then 2 else 14 end;
+  cadence:=case when c.frequency='weekly' then interval '1 week' else interval '1 day' end;
+  boundary:=date_trunc(case when c.frequency='weekly' then 'week' else 'day' end,now() at time zone 'Asia/Karachi') at time zone 'Asia/Karachi';
+  if boundary-cadence*required<c.qualification_started_at then continue; end if;
+  if not exists (
+   select 1 from generate_series(1,required) n
+   where not exists (
+    select 1 from public.arc_periods p where p.commitment_id=c.id
+    and p.starts_at=boundary-cadence*n and p.ends_at=boundary-cadence*(n-1)
+    and p.target=c.target and p.progress>=p.target and p.status not in ('pending','rejected','failed')
+   )
+  ) then update public.arc_commitments set offered_target=next_target where id=c.id; end if;
+ end loop;
+ return (select coalesce(jsonb_agg(jsonb_build_object(
+  'commitmentId',offered.id,'title',offered.title,'unit',offered.rules->>'unit','currentTarget',offered.target,
+  'nextTarget',offered.offered_target,'reward',private.arc_reward(offered.rules,offered.offered_target,offered.offered_target),
+  'maximumPenalty',case when offered.rules->>'penalty'='baseline' then private.arc_reward(offered.rules,offered.offered_target,offered.offered_target) else 0 end
+ ) order by offered.created_at,offered.id),'[]') from public.arc_commitments offered
+ where offered.user_id=owner_id and offered.active and offered.ends_at>now() and offered.offered_target is not null);
+end $$;
+revoke all on function private.arc_advancement_offers(uuid) from public,anon,authenticated;
+
+create or replace function private.arc_upgrade(commitment uuid,new_target integer) returns void
+language plpgsql security definer set search_path='' as $$
+declare c public.arc_commitments; p public.arc_periods; earned integer;
 begin
  if auth.uid() is null then raise exception 'Sign in required'; end if;
  perform private.arc_maintain(auth.uid());
+ perform private.arc_advancement_offers(auth.uid());
  select * into c from public.arc_commitments where id=commitment and user_id=auth.uid() and active for update;
- if not found or c.frequency='once' then raise exception 'Recurring commitment required'; end if;
- if new_target<=greatest(c.target,coalesce(c.pending_target,0)) or not (c.rules->'targets' @> jsonb_build_array(new_target)) then raise exception 'Choose a higher supported baseline'; end if;
- effective:=greatest(c.starts_at,private.arc_boundary(c.frequency,now()));
- if effective>=c.ends_at then raise exception 'No next period remains'; end if;
- update public.arc_commitments set pending_target=new_target,pending_at=effective where id=c.id;
+ if not found or c.frequency='once' or c.ends_at<=now() then raise exception 'Recurring commitment required'; end if;
+ if new_target is null or c.offered_target is null or new_target<>c.offered_target then
+  raise exception 'Complete every target for two full weeks to unlock the next level';
+ end if;
+ select * into p from public.arc_periods where commitment_id=c.id and starts_at<=now() and ends_at>now() for update;
+ if not found or p.status<>'open' then raise exception 'No active period to advance'; end if;
+ earned:=greatest(p.reward,private.arc_reward(p.rules,new_target,p.progress));
+ insert into public.arc_xp(user_id,period_id,category,amount,reason,event_key)
+ values(c.user_id,p.id,p.category,earned-p.reward,'Baseline advanced',p.id||':upgrade:'||new_target);
+ update public.arc_periods set target=new_target,reward=earned where id=p.id;
+ update public.arc_commitments set target=new_target,pending_target=null,pending_at=null,
+  qualification_started_at=now(),offered_target=null,offer_dismissed_until=null where id=c.id;
 end $$;
 
-create function private.arc_record(commitment uuid,amount integer,request_id uuid) returns void language plpgsql security definer set search_path='' as $$
+create or replace function private.arc_dismiss_advancement(commitment uuid,offered_target integer) returns void
+language plpgsql security definer set search_path='' as $$
+begin
+ if auth.uid() is null then raise exception 'Sign in required'; end if;
+ perform private.arc_maintain(auth.uid());
+ update public.arc_commitments c set offered_target=null,offer_dismissed_until=now()+interval '7 days'
+ where c.id=commitment and c.user_id=auth.uid() and c.active and c.offered_target=$2;
+ if not found then raise exception 'This offer is no longer available'; end if;
+end $$;
+
+create or replace function public.arc_dismiss_advancement(commitment uuid,offered_target integer) returns void
+language sql security invoker set search_path='' as $$ select private.arc_dismiss_advancement(commitment,offered_target) $$;
+
+-- Progress recording with step enforcement, cooldowns, and XP protection.
+create or replace function private.arc_record(commitment uuid,amount integer,request_id uuid) returns void language plpgsql security definer set search_path='' as $$
 declare c public.arc_commitments; p public.arc_periods; old_entry public.arc_entries; earned integer; needs_proof boolean;
 begin
  if auth.uid() is null then raise exception 'Sign in required'; end if;
@@ -239,7 +298,7 @@ begin
  and now()<p.last_entry_at+make_interval(mins=>(p.rules->>'cooldownMinutes')::int) then raise exception 'Wait for the cooldown to finish'; end if;
  insert into public.arc_entries(id,period_id,user_id,amount) values(request_id,p.id,auth.uid(),amount);
  needs_proof:=(p.rules->>'approval')::boolean;
- earned:=case when needs_proof then 0 else private.arc_reward(p.rules,p.target,p.progress+amount) end;
+ earned:=case when needs_proof then 0 else greatest(p.reward,private.arc_reward(p.rules,p.target,p.progress+amount)) end;
  insert into public.arc_xp(user_id,period_id,category,amount,reason,event_key)
  values(auth.uid(),p.id,p.category,earned-p.reward,'Progress reward',request_id||':reward');
  update public.arc_periods set progress=progress+amount,entry_count=entry_count+1,last_entry_at=now(),reward=earned,
@@ -251,11 +310,10 @@ begin
  end if;
 end $$;
 
-create function private.arc_review(period uuid,approve boolean) returns void language plpgsql security definer set search_path='' as $$
+create or replace function private.arc_review(period uuid,approve boolean) returns void language plpgsql security definer set search_path='' as $$
 declare p public.arc_periods; c public.arc_commitments; earned integer;
 begin
  if not private.arc_admin() then raise exception 'Administrator required'; end if;
- -- Lock order is commitment, then period, matching recording and maintenance.
  select c0.* into c from public.arc_commitments c0 join public.arc_periods p0 on p0.commitment_id=c0.id where p0.id=period for update of c0;
  select * into p from public.arc_periods where id=period for update;
  if not found or p.status<>'pending' then raise exception 'Pending proof not found'; end if;
@@ -268,7 +326,7 @@ begin
  else perform private.arc_settle(p.id); end if;
 end $$;
 
-create function private.arc_save_challenge(payload jsonb) returns uuid language plpgsql security definer set search_path='' as $$
+create or replace function private.arc_save_challenge(payload jsonb) returns uuid language plpgsql security definer set search_path='' as $$
 declare result uuid; begin
  if not private.arc_admin() then raise exception 'Administrator required'; end if;
  perform private.arc_validate(payload->'rules',payload->>'frequency');
@@ -287,12 +345,14 @@ declare result uuid; begin
  end if;
  return result;
 end $$;
-create function private.arc_submit_idea(idea_title text,idea_description text) returns void language plpgsql security definer set search_path='' as $$
+
+create or replace function private.arc_submit_idea(idea_title text,idea_description text) returns void language plpgsql security definer set search_path='' as $$
 begin
  if auth.uid() is null then raise exception 'Sign in required'; end if;
  insert into public.arc_ideas(user_id,title,description) values(auth.uid(),trim(idea_title),trim(idea_description));
 end $$;
-create function private.arc_review_idea(idea uuid,payload jsonb) returns void language plpgsql security definer set search_path='' as $$
+
+create or replace function private.arc_review_idea(idea uuid,payload jsonb) returns void language plpgsql security definer set search_path='' as $$
 declare new_id uuid; row public.arc_ideas;
 begin
  if not private.arc_admin() then raise exception 'Administrator required'; end if;
@@ -305,12 +365,13 @@ begin
  challenge_id=new_id,reviewed_by=auth.uid() where id=idea;
 end $$;
 
-create function private.arc_snapshot() returns jsonb language plpgsql security definer set search_path='' as $$
+create or replace function private.arc_snapshot() returns jsonb language plpgsql security definer set search_path='' as $$
 declare caller uuid:=auth.uid(); result jsonb;
 begin
  if caller is null then raise exception 'Sign in required'; end if;
  perform private.arc_maintain(caller);
  select jsonb_build_object(
+ 'advancement_offers',private.arc_advancement_offers(caller),
  'profile',(select to_jsonb(p) from public.profiles p where id=caller),
  'seasons',(select coalesce(jsonb_agg(to_jsonb(s)),'[]') from public.arc_seasons s),
  'catalog',(select coalesce(jsonb_agg(to_jsonb(d)||jsonb_build_object('target_rewards',
@@ -362,14 +423,14 @@ begin
 end $$;
 
 -- Only guarded operations are reachable. Internal maintenance/scoring routines stay private.
-create function public.arc_snapshot() returns jsonb language sql security invoker set search_path='' as $$ select private.arc_snapshot() $$;
-create function public.arc_join(challenge uuid,chosen_target integer) returns void language sql security invoker set search_path='' as $$ select private.arc_join(challenge,chosen_target) $$;
-create function public.arc_upgrade(commitment uuid,new_target integer) returns void language sql security invoker set search_path='' as $$ select private.arc_upgrade(commitment,new_target) $$;
-create function public.arc_record(commitment uuid,amount integer,request_id uuid) returns void language sql security invoker set search_path='' as $$ select private.arc_record(commitment,amount,request_id) $$;
-create function public.arc_review(period uuid,approve boolean) returns void language sql security invoker set search_path='' as $$ select private.arc_review(period,approve) $$;
-create function public.arc_save_challenge(payload jsonb) returns uuid language sql security invoker set search_path='' as $$ select private.arc_save_challenge(payload) $$;
-create function public.arc_submit_idea(idea_title text,idea_description text) returns void language sql security invoker set search_path='' as $$ select private.arc_submit_idea(idea_title,idea_description) $$;
-create function public.arc_review_idea(idea uuid,payload jsonb) returns void language sql security invoker set search_path='' as $$ select private.arc_review_idea(idea,payload) $$;
+create or replace function public.arc_snapshot() returns jsonb language sql security invoker set search_path='' as $$ select private.arc_snapshot() $$;
+create or replace function public.arc_join(challenge uuid,chosen_target integer) returns void language sql security invoker set search_path='' as $$ select private.arc_join(challenge,chosen_target) $$;
+create or replace function public.arc_upgrade(commitment uuid,new_target integer) returns void language sql security invoker set search_path='' as $$ select private.arc_upgrade(commitment,new_target) $$;
+create or replace function public.arc_record(commitment uuid,amount integer,request_id uuid) returns void language sql security invoker set search_path='' as $$ select private.arc_record(commitment,amount,request_id) $$;
+create or replace function public.arc_review(period uuid,approve boolean) returns void language sql security invoker set search_path='' as $$ select private.arc_review(period,approve) $$;
+create or replace function public.arc_save_challenge(payload jsonb) returns uuid language sql security invoker set search_path='' as $$ select private.arc_save_challenge(payload) $$;
+create or replace function public.arc_submit_idea(idea_title text,idea_description text) returns void language sql security invoker set search_path='' as $$ select private.arc_submit_idea(idea_title,idea_description) $$;
+create or replace function public.arc_review_idea(idea uuid,payload jsonb) returns void language sql security invoker set search_path='' as $$ select private.arc_review_idea(idea,payload) $$;
 
 do $$ declare t text; f record; begin
  foreach t in array array['arc_seasons','arc_challenges','arc_commitments','arc_periods','arc_entries','arc_xp','arc_ideas'] loop
@@ -379,7 +440,7 @@ do $$ declare t text; f record; begin
  for f in select p.oid::regprocedure signature,n.nspname,p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace
  where n.nspname in ('public','private') and p.proname like 'arc_%' loop
  execute format('revoke all on function %s from public,anon,authenticated',f.signature);
- if f.proname in ('arc_snapshot','arc_join','arc_upgrade','arc_record','arc_review','arc_save_challenge','arc_submit_idea','arc_review_idea') then
+ if f.proname in ('arc_snapshot','arc_join','arc_upgrade','arc_dismiss_advancement','arc_record','arc_review','arc_save_challenge','arc_submit_idea','arc_review_idea') then
  execute format('grant execute on function %s to authenticated',f.signature); end if;
  end loop;
 end $$;
@@ -388,9 +449,12 @@ end $$;
 create extension if not exists pg_cron;
 select cron.schedule('winter-arc-settle','* * * * *','select private.arc_maintain()');
 
+-- Seed season starting October 1, 2026
 insert into public.arc_seasons(id,name,starts_on,ends_on)
-values('20260000-0000-4000-8000-000000000001','Winter Arc 2026','2026-09-23','2026-12-31');
-insert into public.arc_challenges(id,season_id,title,category,frequency,rules,published) values('20260000-0000-4000-8000-000000000001','20260000-0000-4000-8000-000000000001','Water','body','daily','{"mode":"quantity","targets":[2500,3000,3500,4000],"initialTargets":[2500,3000,3500,4000],"cap":4000,"capMultiplier":0,"step":500,"burst":3,"cooldownMinutes":30,"durationMinutes":0,"rateEvery":1,"ratePoints":0,"targetBonus":0,"gate":"target","milestones":[{"threshold":2500,"points":8},{"threshold":3000,"points":10},{"threshold":3500,"points":13},{"threshold":4000,"points":16}],"approval":false,"penalty":"baseline","unit":"ml"}',true);
+values('20260000-0000-4000-8000-000000000001','Winter Arc 2026','2026-10-01','2026-12-31');
+
+-- Seed starter catalog with Water 250ml glass step & burst 4
+insert into public.arc_challenges(id,season_id,title,category,frequency,rules,published) values('20260000-0000-4000-8000-000000000001','20260000-0000-4000-8000-000000000001','Water','body','daily','{"mode":"quantity","targets":[2500,3000,3500,4000],"initialTargets":[2500,3000,3500,4000],"cap":4000,"capMultiplier":0,"step":250,"burst":4,"cooldownMinutes":30,"durationMinutes":0,"rateEvery":1,"ratePoints":0,"targetBonus":0,"gate":"target","milestones":[{"threshold":2500,"points":8},{"threshold":3000,"points":10},{"threshold":3500,"points":13},{"threshold":4000,"points":16}],"approval":false,"penalty":"baseline","unit":"ml"}',true);
 insert into public.arc_challenges(id,season_id,title,category,frequency,rules,published) values('20260000-0000-4000-8000-000000000002','20260000-0000-4000-8000-000000000001','Pushups','body','daily','{"mode":"quantity","targets":[50,100,150,200],"initialTargets":[50,100],"cap":0,"capMultiplier":2,"step":0,"burst":1,"cooldownMinutes":0,"durationMinutes":0,"rateEvery":10,"ratePoints":1,"targetBonus":0,"gate":"target","milestones":[],"approval":false,"penalty":"baseline","unit":"reps"}',true);
 insert into public.arc_challenges(id,season_id,title,category,frequency,rules,published) values('20260000-0000-4000-8000-000000000003','20260000-0000-4000-8000-000000000001','Pullups','body','daily','{"mode":"quantity","targets":[8,20],"initialTargets":[8,20],"cap":0,"capMultiplier":2,"step":0,"burst":1,"cooldownMinutes":0,"durationMinutes":0,"rateEvery":1,"ratePoints":0,"targetBonus":0,"gate":"target","milestones":[],"approval":false,"penalty":"baseline","targetRates":{"8":5,"20":12},"unit":"reps"}',true);
 insert into public.arc_challenges(id,season_id,title,category,frequency,rules,published) values('20260000-0000-4000-8000-000000000004','20260000-0000-4000-8000-000000000001','Salah in Congregation with first takbeer','soul','daily','{"mode":"occurrence","targets":[5],"initialTargets":[5],"cap":0,"capMultiplier":1,"step":1,"burst":1,"cooldownMinutes":60,"durationMinutes":0,"rateEvery":1,"ratePoints":5,"targetBonus":0,"gate":"immediate","milestones":[],"approval":false,"penalty":"baseline","unit":"prayers"}',true);
@@ -406,87 +470,3 @@ insert into public.arc_challenges(id,season_id,title,category,frequency,rules,pu
 insert into public.arc_challenges(id,season_id,title,category,frequency,rules,published) values('20260000-0000-4000-8000-000000000014','20260000-0000-4000-8000-000000000001','Close a $1000 service deal','craft','once','{"mode":"binary","targets":[1],"initialTargets":[1],"cap":1,"capMultiplier":0,"step":1,"burst":1,"cooldownMinutes":0,"durationMinutes":0,"rateEvery":1,"ratePoints":0,"targetBonus":1000,"gate":"target","milestones":[],"approval":true,"penalty":"none","unit":"completion"}',true);
 insert into public.arc_challenges(id,season_id,title,category,frequency,rules,published) values('20260000-0000-4000-8000-000000000015','20260000-0000-4000-8000-000000000001','Build & Ship an App that solves a real-world problem','craft','once','{"mode":"binary","targets":[1],"initialTargets":[1],"cap":1,"capMultiplier":0,"step":1,"burst":1,"cooldownMinutes":0,"durationMinutes":0,"rateEvery":1,"ratePoints":0,"targetBonus":500,"gate":"target","milestones":[],"approval":true,"penalty":"none","unit":"completion"}',true);
 do $$ declare d record; begin for d in select * from public.arc_challenges loop perform private.arc_validate(d.rules,d.frequency); end loop; end $$;
-
--- Existing installations: preserve the old earned total as an opening balance.
--- Older XP did not have reliable categories; leave it explicitly uncategorized.
-alter table public.arc_xp alter column category drop not null;
-do $$ declare row record; d public.arc_challenges; mapped uuid; goal integer; start_at timestamptz; end_at timestamptz; cid uuid; pid uuid; r jsonb; amount integer;
-begin
- if to_regclass('public.challenges') is null then return; end if;
- if to_regprocedure('private.player_leaderboard()') is null then
- raise exception 'Legacy database version is unsupported. Restore/reconcile its schema before cutover; no data has been deleted.';
- end if;
- for row in execute 'select * from private.player_leaderboard()' loop
- insert into public.arc_xp(user_id,category,amount,reason,event_key)
- values(row.id,null,row.points,'Legacy opening balance',row.id||':legacy');
- end loop;
- -- Map known catalog titles to current definitions. Keep other challenges as drafts for admin classification.
- create temporary table arc_legacy_map(old_id uuid primary key,new_id uuid) on commit drop;
- for row in execute 'select * from public.challenges' loop
- select id into mapped from public.arc_challenges where lower(title)=lower(row.title) limit 1;
- if mapped is null then
- select id into mapped from public.arc_challenges where title=case
- when lower(row.title) in ('hydration protocol','2.5l water','2.5l water per day') then 'Water'
- when lower(row.title) like '%push%up%' then 'Pushups'
- when lower(row.title) like '%pull%up%' then 'Pullups'
- when lower(row.title)='1000 squats' then '1,000 squats'
- when lower(row.title)='daily salah' then 'Salah in Congregation with first takbeer'
- when lower(row.title) in ('build & ship an app','ship something real') then 'Build & Ship an App that solves a real-world problem' end limit 1;
- end if;
- if mapped is null then
- r:=jsonb_build_object('mode','binary','unit','completion','targets',jsonb_build_array(1),'initialTargets',jsonb_build_array(1),
- 'cap',1,'capMultiplier',0,'step',1,'burst',1,'cooldownMinutes',0,'durationMinutes',0,'rateEvery',1,'ratePoints',0,
- 'targetBonus',row.points,'gate','target','milestones','[]'::jsonb,'approval',row.requires_approval,
- 'penalty',case when row.frequency::text='once' then 'none' else 'baseline' end);
- insert into public.arc_challenges(season_id,title,description,category,frequency,rules,published)
- values('20260000-0000-4000-8000-000000000001',row.title,row.description,'craft',row.frequency::text,r,false) returning id into mapped;
- end if;
- insert into arc_legacy_map values(row.id,mapped);
- end loop;
- -- Recreate active recurring commitments under the new rules starting next full period.
- -- Old progress remains in the old tables, and its earned XP is in the opening balance.
- if to_regclass('public.challenge_commitments') is not null then
- for row in execute 'select c.user_id,c.challenge_id,to_jsonb(c) as data from public.challenge_commitments c' loop
- select d0.* into d from public.arc_challenges d0 join arc_legacy_map m on m.new_id=d0.id where m.old_id=row.challenge_id;
- if d.frequency='once' or not d.published or coalesce((row.data->>'is_active')::boolean,true)=false then continue; end if;
- select min(v::text::int) into goal from jsonb_array_elements(d.rules->'targets') v
- where v::text::int>=coalesce((row.data->>'custom_target')::int,(d.rules->'initialTargets'->>0)::int);
- goal:=coalesce(goal,(d.rules->'initialTargets'->>0)::int);
- start_at:=private.arc_boundary(d.frequency,now());
- select (ends_on+1)::timestamp at time zone timezone into end_at from public.arc_seasons where id=d.season_id;
- if start_at>=end_at or private.arc_boundary(d.frequency,start_at)>end_at then continue; end if;
- insert into public.arc_commitments(user_id,challenge_id,target,rules,category,frequency,title,starts_at,ends_at,next_period_at)
- values(row.user_id,d.id,goal,d.rules,d.category,d.frequency,d.title,start_at,end_at,start_at) on conflict do nothing;
- end loop;
- end if;
- -- Pending proofs remain reviewable at their original reward, even if the new catalog price differs.
- if to_regclass('public.completions') is not null then
- for row in execute 'select * from public.completions where status::text=''pending''' loop
- select d0.* into d from public.arc_challenges d0 join arc_legacy_map m on m.new_id=d0.id where m.old_id=row.challenge_id;
- r:=d.rules||jsonb_build_object('mode','binary','targets',jsonb_build_array(1),'initialTargets',jsonb_build_array(1),
- 'cap',1,'step',1,'capMultiplier',0,'ratePoints',0,'targetBonus',row.points_awarded,'milestones','[]'::jsonb,'targetRates','{}'::jsonb,'approval',true,'durationMinutes',0,'penalty','none');
- insert into public.arc_commitments(user_id,challenge_id,target,rules,category,frequency,title,starts_at,ends_at,next_period_at,active)
- values(row.user_id,d.id,1,r,d.category,'once',d.title,row.completed_at,now()+interval '1 day',now()+interval '1 day',false)
- returning id into cid;
- insert into public.arc_periods(commitment_id,user_id,starts_at,ends_at,target,rules,category,progress,entry_count,last_entry_at,status)
- values(cid,row.user_id,row.completed_at,now()+interval '1 day',1,r,d.category,1,1,row.completed_at,'pending') returning id into pid;
- end loop;
- end if;
- if to_regclass('public.challenge_ideas') is not null then
- execute 'insert into public.arc_ideas(id,user_id,title,description,created_at)
- select id,submitted_by,title,description,created_at from public.challenge_ideas where status=''pending''';
- end if;
-end $$;
--- Retire old write surfaces without destroying their data or audit history.
-do $$ declare obj record; begin
- for obj in select p.oid::regprocedure signature from pg_proc p join pg_namespace n on n.oid=p.pronamespace
- where n.nspname in ('public','private') and p.proname in
- ('enroll_challenge','upgrade_challenge_target','record_challenge_progress','remove_challenge_progress_entry',
- 'complete_challenge','uncomplete_challenge','review_completion','reverse_completion','submit_challenge_idea','review_challenge_idea','player_challenges','player_leaderboard') loop
- execute format('revoke all on function %s from public,anon,authenticated',obj.signature);
- end loop;
- for obj in select tablename from pg_tables where schemaname='public' and tablename in
- ('challenges','challenge_commitments','challenge_progress_entries','completions','completion_reversals','challenge_ideas') loop
- execute format('revoke all on public.%I from anon,authenticated',obj.tablename);
- end loop;
-end $$;
