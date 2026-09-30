@@ -38,7 +38,7 @@ export function periodKeyFor(challenge: Pick<Challenge, 'frequency'>, now: Date 
 }
 
 
-export function personalArcDay(startDate: string | Date, now: Date = new Date()): {
+export function personalArcDay(startDate: string | Date, now: Date = new Date(), totalDays: number = SEASON_DAYS): {
   dayNumber: number
   daysRemaining: number
   totalDays: number
@@ -52,9 +52,9 @@ export function personalArcDay(startDate: string | Date, now: Date = new Date())
   const startTime = Date.UTC(sy, sm - 1, sd)
   const todayTime = Date.UTC(ty, tm - 1, td)
   const elapsedDays = Math.floor((todayTime - startTime) / 86_400_000)
-  const dayNumber = Math.max(1, Math.min(SEASON_DAYS, elapsedDays + 1))
-  const daysRemaining = SEASON_DAYS - dayNumber
-  return { dayNumber, daysRemaining, totalDays: SEASON_DAYS }
+  const dayNumber = Math.max(1, Math.min(totalDays, elapsedDays + 1))
+  const daysRemaining = totalDays - dayNumber
+  return { dayNumber, daysRemaining, totalDays }
 }
 
 export function personalArcDayKey(startDate: string | Date, dayIndex: number): string {

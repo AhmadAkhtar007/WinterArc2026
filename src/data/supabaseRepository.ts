@@ -84,10 +84,14 @@ export function createSupabaseRepository(client: SupabaseClient): AppRepository 
       const s = await snapshot()
       const { data, error } = await client.auth.getUser()
       if (error || !data.user) throw new Error('Sign in again.')
-      const arc = personalArcDay(s.profile.created_at)
+      const season = s.seasons[0]
+      const seasonStart = season?.starts_on ?? '2026-10-01'
+      const seasonEnd = season?.ends_on ?? '2026-12-31'
+      const seasonDays = Math.max(1, Math.round((new Date(seasonEnd).getTime() - new Date(seasonStart).getTime()) / 86_400_000) + 1)
+      const arc = personalArcDay(seasonStart, new Date(), seasonDays)
       const completed = new Set(s.daily_history.filter((d) => d.completed).map((d) => d.day))
       const completedDays = Array.from({ length: arc.totalDays }, (_, i) => i)
-        .filter((i) => completed.has(personalArcDayKey(s.profile.created_at, i)))
+        .filter((i) => completed.has(personalArcDayKey(seasonStart, i)))
       let streak = 0
       let i = completed.has(localDayKey()) ? arc.dayNumber - 1 : arc.dayNumber - 2
       while (i >= 0 && completedDays.includes(i)) { streak++; i-- }

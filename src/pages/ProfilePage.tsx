@@ -64,7 +64,7 @@ export function ProfilePage({ dashboard, onSignOut, onUpdateDisplayName, onUpdat
         </article>)}
       </div>
     </section>
-    <section className="consistency-card"><div className="section-heading"><h2>100-day record</h2><span>{dashboard.completionRate}%</span></div><div className="heatmap" aria-label={`${dashboard.completionRate}% season completion`}>{Array.from({ length: 100 }, (_, day) => {
+    <section className="consistency-card"><div className="section-heading"><h2>Consistency record</h2><span>{dashboard.completionRate}%</span></div><div className="heatmap" aria-label={`${dashboard.completionRate}% season completion`}>{Array.from({ length: dashboard.totalDays ?? 100 }, (_, day) => {
       const isComplete = dashboard.completedDays
         ? dashboard.completedDays.includes(day)
         : false
